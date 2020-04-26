@@ -2,6 +2,10 @@
 
 Bear (and Hunter)'s Game is an ancient board game played in Cervo Valley, in the Italian Alps
 
+More informations about discovery here:
+https://vallecervobiella.wordpress.com/il-gioco-dellorso/
+ (in Italian)
+
 ## Game rules ##
 
 * First player is the Hunter, he owns three  pawns in the board with the goal to catch (block) the bear in one of the twelve final positions
