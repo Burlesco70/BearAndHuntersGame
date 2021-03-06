@@ -81,8 +81,6 @@ esci_gioco_str = pygame.image.load("images/Esci-dal-gioco.png").convert_alpha()
 font_due_text = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
 font_due_small = pygame.font.Font('fonts/LobsterTwo-Regular.otf',45)
 font_due_big = pygame.font.Font('fonts/LobsterTwo-Regular.otf',90)
-#font = pygame.font.SysFont("monospace", 25)
-
 
 class BearBoard:
     '''
@@ -158,7 +156,7 @@ class BearBoard:
         return self._is_hunter_turn
 
     def manage_hunter_selection(self, sel:int) -> tuple:
-        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn'''
+        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn (not useful in PyGame)'''
         selected_hunter = ''
         # Pick up pawn (starting pos -1)
         if self._hunter_starting_pos == -1:
@@ -180,7 +178,7 @@ class BearBoard:
                 return ("Posizione non valida!", True)
     
     def manage_bear_selection(self,sel: int) -> tuple:
-        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn, 3) bool if turn is changed'''    
+        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn (not useful in PyGame)'''
         if sel in self.get_possible_moves(self._bear_position):
             # Bear makes the move
             self._board[self._bear_position] = '_'
@@ -268,7 +266,6 @@ def menu():
                     pygame.mixer.music.fadeout(800)
                     game(30, True)
 
-        #pygame.display.flip()
         pygame.display.update()
 
 
@@ -277,7 +274,6 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
     '''
     Gioco implementato con PyGame
     '''
-
     pygame.mixer.music.load('sounds/orso_music.ogg')
     pygame.mixer.music.play(-1)
 
@@ -288,7 +284,6 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
     # Inizializzazioni
     running = True
     pos_call = (0, 0)
-    pos_even = (0, 0)
     selezione = None   
     # show non usata, var per decidere se serve o no ridisegnare lo schermo
     show = True
@@ -302,7 +297,6 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
                 menu()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos_call = pygame.mouse.get_pos()
-                pos_even = event.pos
                 # print(pos_call)
                 # Verifica se click su freccia per uscita
                 if uscita_rect.collidepoint(pos_call):
@@ -415,9 +409,6 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
         screen.blit(panel, (40, 680))
         screen.blit(text, (50,705))
 
-        #DEBUG - Mouse con posizione
-        #screen.blit(string, pos_call)
-
         # Aggiornamento screen
         pygame.display.update()
 
@@ -432,7 +423,7 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
                 msg = "Ricomincia l'orso"
             bear_board.reset(numero_mosse, inizia_cacciatore)
 
-# main
+# Main
 if __name__ == "__main__":
     # Il gioco è richiamato da menu
     menu()
