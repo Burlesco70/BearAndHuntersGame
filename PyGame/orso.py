@@ -112,6 +112,22 @@ class BearBoard:
         '''
         return self._bear_moves
 
+
+    def get_max_bear_moves(self) -> int:
+        '''
+        Max bear moves
+        '''
+        return self._max_bear_moves
+
+    def get_board_position(self, position:int) -> str:
+        return self._board[position]
+
+    def get_board_length(self) -> int:
+        '''
+        Return the length of the board
+        '''
+        return len(self._board)
+
     def get_hunter_starting_pos(self) -> int:
         return self._hunter_starting_pos
     
@@ -137,6 +153,9 @@ class BearBoard:
 
     def is_hunter(self, selection:str) -> bool:
         return selection in ['1','8','9']
+
+    def is_hunter_turn(self) -> bool:
+        return self._is_hunter_turn
 
     def manage_hunter_selection(self, sel:int) -> tuple:
         '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn'''
@@ -264,7 +283,7 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
 
     # Inizializza la scacchiera e il gioco
     bear_board = BearBoard(numero_mosse, inizia_cacciatore)
-    msg = "L'orso vince facendo "+str(bear_board._max_bear_moves)+" mosse"
+    msg = "L'orso vince facendo "+str(bear_board.get_max_bear_moves())+" mosse"
     
     # Inizializzazioni
     running = True
@@ -301,7 +320,7 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
                         selezione = pos
                         # Controlla e aggiorna gli spostamenti nella scacchiera
                         # Se click in posizione non corretta, ritorna solo un messaggio
-                        if (bear_board._is_hunter_turn):
+                        if (bear_board.is_hunter_turn()):
                             msg, show = bear_board.manage_hunter_selection(pos)
                         else:
                             msg, show = bear_board.manage_bear_selection(pos)
@@ -323,7 +342,7 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
         screen.blit(panel_due, (1250, 80))
         turno_str = font_due_small.render("Turno", 1, BLACK)
         screen.blit(turno_str, (1300, 90))
-        if not bear_board._is_hunter_turn:
+        if not bear_board.is_hunter_turn():
             screen.blit(orso_sel, (1320, 160))
         else:
             screen.blit(tre_cacciatori, (1265, 160))
@@ -332,50 +351,51 @@ def game(numero_mosse: int, inizia_cacciatore: bool):
         screen.blit(uscita, (1250, 580))
     
         # Disegna la pedine
-        for i in range (0,len(bear_board._board)):
-            if bear_board._board[i] == '2':
-                if not bear_board._is_hunter_turn:
+        bl = bear_board.get_board_length()
+        for i in range (0,bl):
+            if bear_board.get_board_position(i) == '2':
+                if not bear_board.is_hunter_turn():
                     screen.blit(orso_sel, posizioni[i])
                     # Visualizza orme
-                    for j in range (0,len(bear_board._board)):
+                    for j in range (0,bl):
                         if j in bear_board.get_possible_moves(i):
                             screen.blit(orma_orso, posizioni[j])
                 else:
                     screen.blit(orso, posizioni[i])
             # Disegna i 3 cacciatori
-            if bear_board._board[i] == '1':
+            if bear_board.get_board_position(i) == '1':
                 if (bear_board.get_hunter_starting_pos() == i):
                     screen.blit(cacciatoreuno_sel, posizioni[i])
                     # Visualizza orme
-                    for j in range (0,len(bear_board._board)):
+                    for j in range (0,bl):
                         if j in bear_board.get_possible_moves(i):
                             screen.blit(orma_cacciatore, posizioni[j])
                 else:
-                    if bear_board._is_hunter_turn:
+                    if bear_board.is_hunter_turn():
                         screen.blit(cacciatoreuno, posizioni[i])
                     else:
                         screen.blit(cacciatoreuno_idle, posizioni[i])
-            if bear_board._board[i] == '8':
+            if bear_board.get_board_position(i) == '8':
                 if (bear_board.get_hunter_starting_pos() == i):
                     screen.blit(cacciatoredue_sel, posizioni[i])
                     # Visualizza orme
-                    for j in range (0,len(bear_board._board)):
+                    for j in range (0,bl):
                         if j in bear_board.get_possible_moves(i):
                             screen.blit(orma_cacciatore, posizioni[j])
                 else:
-                    if bear_board._is_hunter_turn:
+                    if bear_board.is_hunter_turn():
                         screen.blit(cacciatoredue, posizioni[i])
                     else:
                         screen.blit(cacciatoredue_idle, posizioni[i])
-            if bear_board._board[i] == '9':
+            if bear_board.get_board_position(i) == '9':
                 if (bear_board.get_hunter_starting_pos() == i):
                     screen.blit(cacciatoretre_sel, posizioni[i])
                     # Visualizza orme
-                    for j in range (0,len(bear_board._board)):
+                    for j in range (0, bl):
                         if j in bear_board.get_possible_moves(i):
                             screen.blit(orma_cacciatore, posizioni[j])
                 else:
-                    if bear_board._is_hunter_turn:
+                    if bear_board.is_hunter_turn():
                         screen.blit(cacciatoretre, posizioni[i])
                     else:
                         screen.blit(cacciatoretre_idle, posizioni[i])
