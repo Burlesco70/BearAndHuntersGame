@@ -247,7 +247,7 @@ def menu():
                     pygame.time.delay(800)
                     # fade out menu music
                     pygame.mixer.music.fadeout(800)
-                    game(5, True)
+                    game(30, True)
 
         #pygame.display.flip()
         pygame.display.update()
