@@ -46,7 +46,7 @@ https://vallecervobiella.wordpress.com/il-gioco-dellorso/
 
 * Text _- DONE_
 * Graphical with Tkinter _- DONE_
-* Graphical with PyGame _- DONE_
+* Graphical with PyGame _- DONE_ (Game labels and comments in Italian)
 
 Thanks for the assets in PyGame version to Stefano Gunella and Enrico Battuello
 
