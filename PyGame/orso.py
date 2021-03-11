@@ -124,6 +124,22 @@ class BearBoard:
             return ("Seleziona uno dei cacciatori!", True)
         else:
             return ("Posizione non valida...", False)
+    
+    def is_orma(self, sel:int) -> tuple:
+        if self._is_hunter_turn:
+            if self._hunter_starting_pos == -1:
+                return (None, False)
+            else:
+                if sel in self.get_possible_moves(self._hunter_starting_pos):
+                    return ("HUNTER", True)
+                else:
+                    return (None, False)
+        else:
+            print(self._bear_position)
+            if sel in self.get_possible_moves(self._bear_position):
+                return ("BEAR", True)
+            else:
+                return (None, False)
 
     def get_possible_moves(self, position: int) -> list:
         '''Adjacent locations, index is position'''
@@ -198,25 +214,6 @@ class OrsoPyGame():
 
     def _load_assets_game(self):
         # Caricamento assets
-        # Orso e cacciatori
-        self.ORSO_IMG = get_img('images/little-bear.png')
-        self.ORSO_SEL_IMG = get_img('images/little-bear-sel.png')
-
-        self.CACCIATORE_UNO_IMG = get_img('images/little-hunter1.png')
-        self.CACCIATORE_UNO_IDLE_IMG = get_img('images/little-hunter1-idle.png')
-        self.CACCIATORE_UNO_SEL_IMG = get_img('images/little-hunter1-sel.png')
-
-        self.CACCIATORE_DUE_IMG = get_img('images/little-hunter2.png')
-        self.CACCIATORE_DUE_IDLE_IMG = get_img('images/little-hunter2-idle.png')
-        self.CACCIATORE_DUE_SEL_IMG = get_img('images/little-hunter2-sel.png')
-
-        self.CACCIATORE_TRE_IMG = get_img('images/little-hunter3.png')
-        self.CACCIATORE_TRE_IDLE_IMG = get_img('images/little-hunter3-idle.png')
-        self.CACCIATORE_TRE_SEL_IMG = get_img('images/little-hunter3-sel.png')
-        
-        # Orme
-        self.ORMA_ORSO_IMG = get_img('images/impronta_orso.png')
-        self.ORMA_CACCIATORE_IMG = get_img('images/impronta_cacciatore.png')
 
         # Pannelli, controlli e immagini "messaggio"
         self.PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
@@ -232,8 +229,7 @@ class OrsoPyGame():
         # Scacchiera
         self.BOARD_IMG = get_img('images/board.png')
         # Posizioni nella board dove posizionare le pedine
-        # Per controllo click sulla scacchiera
-        
+        # Per controllo click sulla scacchiera    
 
         # Fonts
         self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
@@ -312,8 +308,8 @@ class OrsoPyGame():
         pygame.mixer.music.play(-1)
 
         # Inizializza la scacchiera e il gioco
-        bear_board = BearBoard(numero_mosse, inizia_cacciatore)
-        msg = "L'orso vince facendo "+str(bear_board.get_max_bear_moves())+" mosse"
+        self.bear_board = BearBoard(numero_mosse, inizia_cacciatore)
+        msg = "L'orso vince facendo "+str(self.bear_board.get_max_bear_moves())+" mosse"
         
         # Inizializzazioni
         running = True
@@ -343,10 +339,10 @@ class OrsoPyGame():
                             selezione = casella_cliccata.position
                             # Controlla e aggiorna gli spostamenti nella scacchiera
                             # Se click in posizione non corretta, ritorna solo un messaggio
-                            if (bear_board.is_hunter_turn()):
-                                msg, show = bear_board.manage_hunter_selection(selezione)
+                            if (self.bear_board.is_hunter_turn()):
+                                msg, show = self.bear_board.manage_hunter_selection(selezione)
                             else:
-                                msg, show = bear_board.manage_bear_selection(selezione)                        
+                                msg, show = self.bear_board.manage_bear_selection(selezione)                        
         
             # Debug 
             #string = font.render("pos_call = " + str(pos_call), 1, BLACK)
@@ -356,7 +352,7 @@ class OrsoPyGame():
 
             # Pannello mosse orso
             mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)
-            mosse = self.LOBSTER_90.render(str(bear_board.get_bear_moves()), 1, BLACK)    
+            mosse = self.LOBSTER_90.render(str(self.bear_board.get_bear_moves()), 1, BLACK)    
             self.screen.blit(self.PANNELLO_DUE_IMG, (80, 80))  
             self.screen.blit(mosse_str, (90, 90))  
             self.screen.blit(mosse, (145, 140))    
@@ -365,67 +361,22 @@ class OrsoPyGame():
             self.screen.blit(self.PANNELLO_DUE_IMG, (1250, 80))
             turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
             self.screen.blit(turno_str, (1300, 90))
-            if not bear_board.is_hunter_turn():
-                self.screen.blit(self.ORSO_SEL_IMG, (1320, 160))
+            if not self.bear_board.is_hunter_turn():
+                self.screen.blit(self.ORSO_IDLE_IMG, (1320, 160))
             else:
                 self.screen.blit(self.TRE_CACCIATORI_IMG, (1265, 160))
 
             # Pannello uscita
             self.screen.blit(self.USCITA_IMG, (1250, 580))
-        
-            # Disegna la pedine
-            bl = bear_board.get_board_length()
-            for i in range (0,bl):
-                if bear_board.get_board_position(i) == '2':
-                    if not bear_board.is_hunter_turn():
-                        self.screen.blit(self.ORSO_SEL_IMG, self._caselle[i])
-                        # Visualizza orme
-                        for j in range (0,bl):
-                            if j in bear_board.get_possible_moves(i):
-                                self.screen.blit(self.ORMA_ORSO_IMG, self._caselle[j])
-                    else:
-                        self.screen.blit(self.ORSO_IMG, self._caselle[i])
-                # Disegna i 3 cacciatori
-                if bear_board.get_board_position(i) == '1':
-                    if (bear_board.get_hunter_starting_pos() == i):
-                        self.screen.blit(self.CACCIATORE_UNO_SEL_IMG, self._caselle[i])
-                        # Visualizza orme
-                        for j in range (0,bl):
-                            if j in bear_board.get_possible_moves(i):
-                                self.screen.blit(self.ORMA_CACCIATORE_IMG, self._caselle[j])
-                    else:
-                        if bear_board.is_hunter_turn():
-                            self.screen.blit(self.CACCIATORE_UNO_IMG, self._caselle[i])
-                        else:
-                            self.screen.blit(self.CACCIATORE_UNO_IDLE_IMG, self._caselle[i])
-                if bear_board.get_board_position(i) == '8':
-                    if (bear_board.get_hunter_starting_pos() == i):
-                        self.screen.blit(self.CACCIATORE_DUE_SEL_IMG, self._caselle[i])
-                        # Visualizza orme
-                        for j in range (0,bl):
-                            if j in bear_board.get_possible_moves(i):
-                                self.screen.blit(self.ORMA_CACCIATORE_IMG, self._caselle[j])
-                    else:
-                        if bear_board.is_hunter_turn():
-                            self.screen.blit(self.CACCIATORE_DUE_IMG, self._caselle[i])
-                        else:
-                            self.screen.blit(self.CACCIATORE_DUE_IDLE_IMG, self._caselle[i])
-                if bear_board.get_board_position(i) == '9':
-                    if (bear_board.get_hunter_starting_pos() == i):
-                        self.screen.blit(self.CACCIATORE_TRE_SEL_IMG, self._caselle[i])
-                        # Visualizza orme
-                        for j in range (0, bl):
-                            if j in bear_board.get_possible_moves(i):
-                                self.screen.blit(self.ORMA_CACCIATORE_IMG, self._caselle[j])
-                    else:
-                        if bear_board.is_hunter_turn():
-                            self.screen.blit(self.CACCIATORE_TRE_IMG, self._caselle[i])
-                        else:
-                            self.screen.blit(self.CACCIATORE_TRE_IDLE_IMG, self._caselle[i])
+
+            # Aggiorna le caselle
+            self._lista_caselle.update()
+            self._lista_caselle.draw(self.screen)
+
             # Check fine del gioco
-            if bear_board.game_over():
-                msg = bear_board.get_winner()
-                if bear_board.is_bear_winner():
+            if self.bear_board.game_over():
+                msg = self.bear_board.get_winner()
+                if self.bear_board.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
                     self.screen.blit(self.ORSO_VINCE, (580,380))            
                     
@@ -442,7 +393,7 @@ class OrsoPyGame():
             pygame.display.update()
 
             # Reset del gioco
-            if bear_board.game_over():
+            if self.bear_board.game_over():
                 time.sleep(5)
                 # Si inverte chi inizia
                 inizia_cacciatore = not(inizia_cacciatore)
@@ -450,13 +401,84 @@ class OrsoPyGame():
                     msg = "Ricominciano i cacciatori"
                 else:
                     msg = "Ricomincia l'orso"
-                bear_board.reset(numero_mosse, inizia_cacciatore)
+                self.bear_board.reset(numero_mosse, inizia_cacciatore)
 
 class CasellaGiocoOrso(pygame.sprite.Sprite):
+    # Static resources
+    TRASPARENTE = pygame.Surface((80,80), pygame.SRCALPHA)
+
+    ORSO_IMG = get_img('images/little-bear.png')
+    ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
+    ORSO_SEL_IMG = get_img('images/little-bear-sel.png')
+
+    CACCIATORE_UNO_IMG = get_img('images/little-hunter1.png')
+    CACCIATORE_UNO_IDLE_IMG = get_img('images/little-hunter1-idle.png')
+    CACCIATORE_UNO_SEL_IMG = get_img('images/little-hunter1-sel.png')
+
+    CACCIATORE_DUE_IMG = get_img('images/little-hunter2.png')
+    CACCIATORE_DUE_IDLE_IMG = get_img('images/little-hunter2-idle.png')
+    CACCIATORE_DUE_SEL_IMG = get_img('images/little-hunter2-sel.png')
+
+    CACCIATORE_TRE_IMG = get_img('images/little-hunter3.png')
+    CACCIATORE_TRE_IDLE_IMG = get_img('images/little-hunter3-idle.png')
+    CACCIATORE_TRE_SEL_IMG = get_img('images/little-hunter3-sel.png')
+        
+    # Orme
+    ORMA_ORSO_IMG = get_img('images/impronta_orso.png')
+    ORMA_CACCIATORE_IMG = get_img('images/impronta_cacciatore.png')
+
     def __init__(self, position: int, game: OrsoPyGame):
         super().__init__()
         self.position = position
         self.game = game
+
+    def update(self):
+        #super().update()
+        # Disegna la pedine ottenendo la board dall'oggetto gioco
+        bb = self.game.bear_board
+        #print("aggiorno la casella ", self.position)
+        if bb.get_board_position(self.position) == '_':
+            # Controllo se è orma
+            tipo_orma, is_orma = bb.is_orma(self.position)            
+            if is_orma:
+                #print(self.position, is_orma, tipo_orma)
+                if tipo_orma == 'HUNTER':
+                    self.image = CasellaGiocoOrso.ORMA_CACCIATORE_IMG
+                else:
+                    self.image = CasellaGiocoOrso.ORMA_ORSO_IMG                    
+            else:
+                self.image = CasellaGiocoOrso.TRASPARENTE
+        # Verifica se è orso
+        if bb.get_board_position(self.position) == '2':            
+            if not bb.is_hunter_turn():
+                self.image = CasellaGiocoOrso.ORSO_SEL_IMG
+            else:
+                self.image = CasellaGiocoOrso.ORSO_IMG
+        # Verifica se è uno dei cacciatori
+        if bb.get_board_position(self.position) == '1':
+            if (bb.get_hunter_starting_pos() == self.position):
+                self.image = CasellaGiocoOrso.CACCIATORE_UNO_SEL_IMG
+            else:
+                if bb.is_hunter_turn():
+                    self.image = CasellaGiocoOrso.CACCIATORE_UNO_IMG
+                else:
+                    self.image = CasellaGiocoOrso.CACCIATORE_UNO_IDLE_IMG
+        if bb.get_board_position(self.position) == '8':
+            if (bb.get_hunter_starting_pos() == self.position):
+                self.image = CasellaGiocoOrso.CACCIATORE_DUE_SEL_IMG
+            else:
+                if bb.is_hunter_turn():
+                    self.image = CasellaGiocoOrso.CACCIATORE_DUE_IMG
+                else:
+                    self.image = CasellaGiocoOrso.CACCIATORE_DUE_IDLE_IMG
+        if bb.get_board_position(self.position) == '9':
+            if (bb.get_hunter_starting_pos() == self.position):
+                self.image = CasellaGiocoOrso.CACCIATORE_TRE_SEL_IMG
+            else:
+                if bb.is_hunter_turn():
+                    self.image = CasellaGiocoOrso.CACCIATORE_TRE_IMG
+                else:
+                    self.image = CasellaGiocoOrso.CACCIATORE_TRE_IDLE_IMG
 
 
 # Main
