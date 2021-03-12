@@ -125,20 +125,25 @@ class BearGame:
         else:
             return ("Posizione non valida...", False)
     
-    def is_orma(self, sel:int) -> tuple:
+    def is_footprint_and_type(self, sel:int) -> tuple:
+        '''
+        Return a tuple:
+        - if is a footprint
+        - footprint type (HUNTER|BEAR)
+        '''
         if self._is_hunter_turn:
             if self._hunter_starting_pos == -1:
-                return (None, False)
+                return (False, None)
             else:
                 if sel in self.get_possible_moves(self._hunter_starting_pos):
-                    return ("HUNTER", True)
+                    return (True, "HUNTER")
                 else:
-                    return (None, False)
+                    return (False, None)
         else:
             if sel in self.get_possible_moves(self._bear_position):
-                return ("BEAR", True)
+                return (True, "BEAR")
             else:
-                return (None, False)
+                return (False, None)
 
     def get_possible_moves(self, position: int) -> list:
         '''Adjacent locations, index is position'''
@@ -441,7 +446,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
         #print("aggiorno la casella ", self.position)
         if bb.get_board_position(self.position) == '_':
             # Controllo se è orma
-            tipo_orma, is_orma = bb.is_orma(self.position)            
+            is_orma, tipo_orma  = bb.is_footprint_and_type(self.position)            
             if is_orma:
                 #print(self.position, is_orma, tipo_orma)
                 if tipo_orma == 'HUNTER':
