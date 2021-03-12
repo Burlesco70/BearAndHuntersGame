@@ -71,7 +71,7 @@ class BearGame:
         if (self._bear_moves >= self._max_bear_moves):
             return True
 
-    def get_winner(self) -> str:
+    def get_winner_display(self) -> str:
         '''Returns the winner in a string type for display purposes'''
         if not(self.get_possible_moves(self._bear_position)):
             return 'Hanno vinto i cacciatori!'
@@ -90,16 +90,16 @@ class BearGame:
     def is_hunter_turn(self) -> bool:
         return self._is_hunter_turn
 
-    def manage_hunter_selection(self, sel:int) -> tuple:
-        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn (not useful in PyGame)'''
+    def manage_hunter_selection(self, sel:int) -> str:
+        '''Input selection from user; return user message to display'''
         selected_hunter = ''
         # Pick up pawn (starting pos -1)
         if self._hunter_starting_pos == -1:
             if (not(self.is_hunter(self._board[sel]))):
-                return ("Seleziona un cacciatore!", True)
+                return "Seleziona un cacciatore!"
             else:
                 self._hunter_starting_pos = sel
-                return ("Cacciatore, fa' la tua mossa!", True)
+                return "Cacciatore, fa' la tua mossa!"
         else: # Finding final position for hunter
             if sel in self.get_possible_moves(self._hunter_starting_pos):
                 selected_hunter = self._board[self._hunter_starting_pos]
@@ -107,13 +107,13 @@ class BearGame:
                 self._board[sel] = selected_hunter
                 self._hunter_starting_pos = -1
                 self._is_hunter_turn = not(self._is_hunter_turn)
-                return ("Orso, scegli la tua mossa!", True)
+                return "Orso, scegli la tua mossa!"
             else: # Go back to picking stage
                 self._hunter_starting_pos = -1
-                return ("Posizione non valida!", True)
+                return "Posizione non valida!"
     
-    def manage_bear_selection(self,sel: int) -> tuple:
-        '''Input selection from user; return 2 outputs: 1) message, 2) bool if board must be redrawn (not useful in PyGame)'''
+    def manage_bear_selection(self,sel: int) -> str:
+        '''Input selection from user; return user message to display'''
         if sel in self.get_possible_moves(self._bear_position):
             # Bear makes the move
             self._board[self._bear_position] = '_'
@@ -121,15 +121,15 @@ class BearGame:
             self._bear_moves += 1
             self._bear_position = sel
             self._is_hunter_turn = not(self._is_hunter_turn)
-            return ("Seleziona uno dei cacciatori!", True)
+            return "Seleziona uno dei cacciatori!"
         else:
-            return ("Posizione non valida...", False)
+            return "Posizione non valida..."
     
     def is_footprint_and_type(self, sel:int) -> tuple:
         '''
         Return a tuple:
         - if is a footprint
-        - footprint type (HUNTER|BEAR)
+        - footprint type (HUNTER|BEAR), None if is not a footprint
         '''
         if self._is_hunter_turn:
             if self._hunter_starting_pos == -1:
@@ -348,9 +348,9 @@ class OrsoPyGame():
                             # Controlla e aggiorna gli spostamenti nella scacchiera
                             # Se click in posizione non corretta, ritorna solo un messaggio
                             if (self.gioco_orso.is_hunter_turn()):
-                                msg, show = self.gioco_orso.manage_hunter_selection(selezione)
+                                msg = self.gioco_orso.manage_hunter_selection(selezione)
                             else:
-                                msg, show = self.gioco_orso.manage_bear_selection(selezione)                        
+                                msg = self.gioco_orso.manage_bear_selection(selezione)                        
         
             # Debug 
             #string = font.render("self._pos_call = " + str(self._pos_call), 1, BLACK)
@@ -383,7 +383,7 @@ class OrsoPyGame():
 
             # Check fine del gioco
             if self.gioco_orso.game_over():
-                msg = self.gioco_orso.get_winner()
+                msg = self.gioco_orso.get_winner_display()
                 if self.gioco_orso.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
                     self.screen.blit(self.ORSO_VINCE, (580,380))            
