@@ -6,16 +6,6 @@ import functools
 # Palette - RGB colors
 BLACK = (0, 0, 0)
 
-# Metodo per ottimizzare il caricamento degli assets
-# "lru_cache" decorator saves recent images into memory for fast retrieval.
-@functools.lru_cache()
-def get_img(path):
-    return pygame.image.load(path)
-
-@functools.lru_cache()
-def get_img_alpha(path):
-    return pygame.image.load(path).convert_alpha()
-
 class BearGame:
     '''
     PyGame independent game class
@@ -175,6 +165,15 @@ class BearGame:
                 moves.append(x)
         return moves
 
+# Metodo per ottimizzare il caricamento degli assets
+# "lru_cache" decorator saves recent images into memory for fast retrieval.
+@functools.lru_cache()
+def get_img(path):
+    return pygame.image.load(path)
+
+@functools.lru_cache()
+def get_img_alpha(path):
+    return pygame.image.load(path).convert_alpha()
 
 class OrsoPyGame():
 
@@ -212,12 +211,12 @@ class OrsoPyGame():
 
 
     def _load_assets_common(self):
+        '''Caricamento assets in comune tra menu e gioco'''
         self.ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
         self.TRE_CACCIATORI_IMG = get_img('images/TreCacciatoriTurno.png')
 
     def _load_assets_game(self):
-        # Caricamento assets
-
+        '''Caricamento assets del gioco'''
         # Pannelli, controlli e immagini "messaggio"
         self.PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
         self.PANNELLO_DUE_IMG = get_img('images/panel.png') #panel_due
@@ -231,8 +230,6 @@ class OrsoPyGame():
 
         # Scacchiera
         self.BOARD_IMG = get_img('images/board.png')
-        # Posizioni nella board dove posizionare le pedine
-        # Per controllo click sulla scacchiera    
 
         # Fonts
         self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
@@ -240,7 +237,7 @@ class OrsoPyGame():
         self.LOBSTER_90 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',90)
 
     def _load_assets_menu(self):
-        # Assets per menu
+        '''Caricamento assets menu'''
         # grafica titolo creata con https://textcraft.net/
         self.TITOLO = get_img_alpha("images/Gioco-dellorso.png")
         self.MENU_BACKGROUND = get_img("images/3d_board.png")
@@ -280,14 +277,14 @@ class OrsoPyGame():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
-                    self.quit()
+                    self._quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:                
                     self._pos_call = pygame.mouse.get_pos()
                     # print(pos_call)
                     # Per uscire
                     if self.ESCI_GIOCO_RECT.collidepoint(self._pos_call):
                         self._running = False
-                        self.quit()
+                        self._quit()
 
                     # Per iniziare il gioco
                     if self.INIZIA_RECT.collidepoint(self._pos_call):
@@ -299,14 +296,17 @@ class OrsoPyGame():
 
             pygame.display.update()
 
-    def quit(self):
+    def _quit(self):
         pygame.time.delay(500)
         pygame.mixer.music.fadeout(500)
         pygame.mixer.music.stop()
         pygame.quit()
         sys.exit()
 
-
+    def _menu_call(self):
+        pygame.time.delay(500)
+        pygame.mixer.music.fadeout(500)
+        self.menu()
 
     def game(self, numero_mosse: int, inizia_cacciatore: bool):
         '''
@@ -317,58 +317,50 @@ class OrsoPyGame():
 
         # Inizializza la scacchiera e il gioco
         self.gioco_orso = BearGame(numero_mosse, inizia_cacciatore)
-        msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
+        self._msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
         
         # Inizializzazioni
         self._running = True
         self._pos_call = (0, 0)
-        selezione = None   
-        # show non usata, var per decidere se serve o no ridisegnare lo schermo
-        show = True        
+        self._selezione = None   
 
         while self._running:
             #self._pos_call = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
-                    pygame.mixer.music.stop()
-                    menu()
+                    self._menu_call()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self._pos_call = pygame.mouse.get_pos()
-                    # print(self._pos_call)
                     # Verifica se click su freccia per uscita
                     if self.USCITA_RECT.collidepoint(self._pos_call):
                         self._running = False
-                        pygame.mixer.music.stop()
-                        self.menu()
-
+                        self._menu_call()
+                    # Controlla click nelle caselle
                     for casella_cliccata in self._lista_caselle:
                         if casella_cliccata.rect.collidepoint(self._pos_call):
-                            selezione = casella_cliccata.position
+                            self._selezione = casella_cliccata.position
                             # Controlla e aggiorna gli spostamenti nella scacchiera
                             # Se click in posizione non corretta, ritorna solo un messaggio
                             if (self.gioco_orso.is_hunter_turn()):
-                                msg = self.gioco_orso.manage_hunter_selection(selezione)
+                                self._msg = self.gioco_orso.manage_hunter_selection(self._selezione)
                             else:
-                                msg = self.gioco_orso.manage_bear_selection(selezione)                        
-        
-            # Debug 
-            #string = font.render("self._pos_call = " + str(self._pos_call), 1, BLACK)
+                                self._msg = self.gioco_orso.manage_bear_selection(self._selezione)                        
             self.clock.tick(60)
             # Disegna la scacchiera
             self.screen.blit(self.BOARD_IMG, (0, 0))
 
             # Pannello mosse orso
-            mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)
-            mosse = self.LOBSTER_90.render(str(self.gioco_orso.get_bear_moves()), 1, BLACK)    
+            self._mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)
+            self._mosse = self.LOBSTER_90.render(str(self.gioco_orso.get_bear_moves()), 1, BLACK)    
             self.screen.blit(self.PANNELLO_DUE_IMG, (80, 80))  
-            self.screen.blit(mosse_str, (90, 90))  
-            self.screen.blit(mosse, (145, 140))    
+            self.screen.blit(self._mosse_str, (90, 90))  
+            self.screen.blit(self._mosse, (145, 140))    
 
             # Pannello turno
             self.screen.blit(self.PANNELLO_DUE_IMG, (1250, 80))
-            turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
-            self.screen.blit(turno_str, (1300, 90))
+            self._turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
+            self.screen.blit(self._turno_str, (1300, 90))
             if not self.gioco_orso.is_hunter_turn():
                 self.screen.blit(self.ORSO_IDLE_IMG, (1320, 160))
             else:
@@ -383,7 +375,7 @@ class OrsoPyGame():
 
             # Check fine del gioco
             if self.gioco_orso.game_over():
-                msg = self.gioco_orso.get_winner_display()
+                self._msg = self.gioco_orso.get_winner_display()
                 if self.gioco_orso.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
                     self.screen.blit(self.ORSO_VINCE, (580,380))            
@@ -393,9 +385,9 @@ class OrsoPyGame():
                     self.screen.blit(self.CACCIATORI_VINCONO, (480,380))            
 
             # Pannello messaggi
-            text = self.LOBSTER_30.render(msg, 1, BLACK)            
+            self._text = self.LOBSTER_30.render(self._msg, 1, BLACK)            
             self.screen.blit(self.PANNELLO_UNO_IMG, (40, 680))
-            self.screen.blit(text, (50,705))
+            self.screen.blit(self._text, (50,705))
 
             # Aggiornamento screen
             pygame.display.update()
@@ -406,12 +398,16 @@ class OrsoPyGame():
                 # Si inverte chi inizia
                 inizia_cacciatore = not(inizia_cacciatore)
                 if inizia_cacciatore:
-                    msg = "Ricominciano i cacciatori"
+                    self._msg = "Ricominciano i cacciatori"
                 else:
-                    msg = "Ricomincia l'orso"
+                    self._msg = "Ricomincia l'orso"
                 self.gioco_orso.reset(numero_mosse, inizia_cacciatore)
 
 class CasellaGiocoOrso(pygame.sprite.Sprite):
+    '''
+    Oggetto casella del gioco
+    Gestisce la visualizzazione di personaggi e orme
+    '''
     # Static resources
     TRASPARENTE = pygame.Surface((80,80), pygame.SRCALPHA)
 
@@ -441,6 +437,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
         self.game = game
 
     def update(self):
+        '''Valorizza l'attributo image dello sprite'''
         # Disegna la pedine ottenendo la board dall'oggetto gioco
         bb = self.game.gioco_orso
         #print("aggiorno la casella ", self.position)
