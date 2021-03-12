@@ -16,7 +16,7 @@ def get_img(path):
 def get_img_alpha(path):
     return pygame.image.load(path).convert_alpha()
 
-class BearBoard:
+class BearGame:
     '''
     PyGame independent game class
     Class for logical board and game model
@@ -135,7 +135,6 @@ class BearBoard:
                 else:
                     return (None, False)
         else:
-            print(self._bear_position)
             if sel in self.get_possible_moves(self._bear_position):
                 return ("BEAR", True)
             else:
@@ -170,7 +169,6 @@ class BearBoard:
             if self._board[x] == '_':
                 moves.append(x)
         return moves
-
 
 
 class OrsoPyGame():
@@ -270,33 +268,38 @@ class OrsoPyGame():
         self.screen.blit(self.ESCI_GIOCO, (100, 680))
         self.screen.blit(self.ESCI_GIOCO_STR, (170, 690))
 
-        pos_call = (0, 0)
-        running = True
-        while running:
-            pos_call = pygame.mouse.get_pos()
+        self._pos_call = (0, 0)
+        self._running = True
+        while self._running:
+            self._pos_call = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
-                    pygame.quit()
-                    sys.exit()
+                    self._running = False
+                    self.quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:                
-                    pos_call = pygame.mouse.get_pos()
+                    self._pos_call = pygame.mouse.get_pos()
                     # print(pos_call)
                     # Per uscire
-                    if self.ESCI_GIOCO_RECT.collidepoint(pos_call):
-                        running = False
-                        pygame.quit()
-                        sys.exit()
+                    if self.ESCI_GIOCO_RECT.collidepoint(self._pos_call):
+                        self._running = False
+                        self.quit()
 
                     # Per iniziare il gioco
-                    if self.INIZIA_RECT.collidepoint(pos_call):
-                        running = False
+                    if self.INIZIA_RECT.collidepoint(self._pos_call):
+                        self._running = False
                         pygame.time.delay(800)
                         # fade out menu music
                         pygame.mixer.music.fadeout(800)
                         self.game(30, True)
 
             pygame.display.update()
+
+    def quit(self):
+        pygame.time.delay(500)
+        pygame.mixer.music.fadeout(500)
+        pygame.mixer.music.stop()
+        pygame.quit()
+        sys.exit()
 
 
 
@@ -308,51 +311,51 @@ class OrsoPyGame():
         pygame.mixer.music.play(-1)
 
         # Inizializza la scacchiera e il gioco
-        self.bear_board = BearBoard(numero_mosse, inizia_cacciatore)
-        msg = "L'orso vince facendo "+str(self.bear_board.get_max_bear_moves())+" mosse"
+        self.gioco_orso = BearGame(numero_mosse, inizia_cacciatore)
+        msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
         
         # Inizializzazioni
-        running = True
-        pos_call = (0, 0)
+        self._running = True
+        self._pos_call = (0, 0)
         selezione = None   
         # show non usata, var per decidere se serve o no ridisegnare lo schermo
         show = True        
 
-        while running:
-            #pos_call = pygame.mouse.get_pos()
+        while self._running:
+            #self._pos_call = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    self._running = False
                     pygame.mixer.music.stop()
                     menu()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pos_call = pygame.mouse.get_pos()
-                    # print(pos_call)
+                    self._pos_call = pygame.mouse.get_pos()
+                    # print(self._pos_call)
                     # Verifica se click su freccia per uscita
-                    if self.USCITA_RECT.collidepoint(pos_call):
-                        running = False
+                    if self.USCITA_RECT.collidepoint(self._pos_call):
+                        self._running = False
                         pygame.mixer.music.stop()
                         self.menu()
 
                     for casella_cliccata in self._lista_caselle:
-                        if casella_cliccata.rect.collidepoint(pos_call):
+                        if casella_cliccata.rect.collidepoint(self._pos_call):
                             selezione = casella_cliccata.position
                             # Controlla e aggiorna gli spostamenti nella scacchiera
                             # Se click in posizione non corretta, ritorna solo un messaggio
-                            if (self.bear_board.is_hunter_turn()):
-                                msg, show = self.bear_board.manage_hunter_selection(selezione)
+                            if (self.gioco_orso.is_hunter_turn()):
+                                msg, show = self.gioco_orso.manage_hunter_selection(selezione)
                             else:
-                                msg, show = self.bear_board.manage_bear_selection(selezione)                        
+                                msg, show = self.gioco_orso.manage_bear_selection(selezione)                        
         
             # Debug 
-            #string = font.render("pos_call = " + str(pos_call), 1, BLACK)
+            #string = font.render("self._pos_call = " + str(self._pos_call), 1, BLACK)
             self.clock.tick(60)
             # Disegna la scacchiera
             self.screen.blit(self.BOARD_IMG, (0, 0))
 
             # Pannello mosse orso
             mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)
-            mosse = self.LOBSTER_90.render(str(self.bear_board.get_bear_moves()), 1, BLACK)    
+            mosse = self.LOBSTER_90.render(str(self.gioco_orso.get_bear_moves()), 1, BLACK)    
             self.screen.blit(self.PANNELLO_DUE_IMG, (80, 80))  
             self.screen.blit(mosse_str, (90, 90))  
             self.screen.blit(mosse, (145, 140))    
@@ -361,7 +364,7 @@ class OrsoPyGame():
             self.screen.blit(self.PANNELLO_DUE_IMG, (1250, 80))
             turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
             self.screen.blit(turno_str, (1300, 90))
-            if not self.bear_board.is_hunter_turn():
+            if not self.gioco_orso.is_hunter_turn():
                 self.screen.blit(self.ORSO_IDLE_IMG, (1320, 160))
             else:
                 self.screen.blit(self.TRE_CACCIATORI_IMG, (1265, 160))
@@ -374,9 +377,9 @@ class OrsoPyGame():
             self._lista_caselle.draw(self.screen)
 
             # Check fine del gioco
-            if self.bear_board.game_over():
-                msg = self.bear_board.get_winner()
-                if self.bear_board.is_bear_winner():
+            if self.gioco_orso.game_over():
+                msg = self.gioco_orso.get_winner()
+                if self.gioco_orso.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
                     self.screen.blit(self.ORSO_VINCE, (580,380))            
                     
@@ -393,7 +396,7 @@ class OrsoPyGame():
             pygame.display.update()
 
             # Reset del gioco
-            if self.bear_board.game_over():
+            if self.gioco_orso.game_over():
                 time.sleep(5)
                 # Si inverte chi inizia
                 inizia_cacciatore = not(inizia_cacciatore)
@@ -401,7 +404,7 @@ class OrsoPyGame():
                     msg = "Ricominciano i cacciatori"
                 else:
                     msg = "Ricomincia l'orso"
-                self.bear_board.reset(numero_mosse, inizia_cacciatore)
+                self.gioco_orso.reset(numero_mosse, inizia_cacciatore)
 
 class CasellaGiocoOrso(pygame.sprite.Sprite):
     # Static resources
@@ -433,9 +436,8 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
         self.game = game
 
     def update(self):
-        #super().update()
         # Disegna la pedine ottenendo la board dall'oggetto gioco
-        bb = self.game.bear_board
+        bb = self.game.gioco_orso
         #print("aggiorno la casella ", self.position)
         if bb.get_board_position(self.position) == '_':
             # Controllo se è orma
