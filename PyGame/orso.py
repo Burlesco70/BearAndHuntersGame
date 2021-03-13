@@ -189,7 +189,6 @@ class OrsoPyGame():
         pygame.display.set_caption("Gioco dell'orso")
         # set game clock
         self.clock = pygame.time.Clock()
-        self._load_assets_common()
         self._load_assets_menu()
         self._load_assets_game()
         # Gestione caselle: posizione e gruppo sprite
@@ -209,18 +208,8 @@ class OrsoPyGame():
             pos.rect = pygame.Rect(p[0],p[1], OrsoPyGame.DIM_CASELLA, OrsoPyGame.DIM_CASELLA)
             self._lista_caselle.add(pos)
 
-
-    def _load_assets_common(self):
-        '''Caricamento assets in comune tra menu e gioco'''
-        self.ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
-        self.TRE_CACCIATORI_IMG = get_img('images/TreCacciatoriTurno.png')
-
     def _load_assets_game(self):
         '''Caricamento assets del gioco'''
-        # Pannelli, controlli e immagini "messaggio"
-        self.PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
-        self.PANNELLO_DUE_IMG = get_img('images/panel.png') #panel_due
-
         self.USCITA_IMG = get_img('images/back.png')
         self.USCITA_RECT = self.USCITA_IMG.get_rect()
         self.USCITA_RECT.center = (1355,675)
@@ -231,14 +220,12 @@ class OrsoPyGame():
         # Scacchiera
         self.BOARD_IMG = get_img('images/board.png')
 
-        # Fonts
-        self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
-        self.LOBSTER_45 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',45)
-        self.LOBSTER_90 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',90)
-
     def _load_assets_menu(self):
         '''Caricamento assets menu'''
         # grafica titolo creata con https://textcraft.net/
+        self.ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
+        self.TRE_CACCIATORI_IMG = get_img('images/TreCacciatoriTurno.png')
+
         self.TITOLO = get_img_alpha("images/Gioco-dellorso.png")
         self.MENU_BACKGROUND = get_img("images/3d_board.png")
         self.INIZIA = get_img('images/buttonLong.png')
@@ -318,6 +305,15 @@ class OrsoPyGame():
         # Inizializza la scacchiera e il gioco
         self.gioco_orso = BearGame(numero_mosse, inizia_cacciatore)
         self._msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
+
+         # Creazione gruppo elementi di HUD
+        self._hud = pygame.sprite.Group()
+        self._h_turno = HudTurno(self)
+        self._h_mosse = HudMosseOrso(self)
+        self._h_msg = HudMessaggi(self)
+        self._hud.add(self._h_turno)
+        self._hud.add(self._h_mosse)
+        self._hud.add(self._h_msg)       
         
         # Inizializzazioni
         self._running = True
@@ -350,28 +346,16 @@ class OrsoPyGame():
             # Disegna la scacchiera
             self.screen.blit(self.BOARD_IMG, (0, 0))
 
-            # Pannello mosse orso
-            self._mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)
-            self._mosse = self.LOBSTER_90.render(str(self.gioco_orso.get_bear_moves()), 1, BLACK)    
-            self.screen.blit(self.PANNELLO_DUE_IMG, (80, 80))  
-            self.screen.blit(self._mosse_str, (90, 90))  
-            self.screen.blit(self._mosse, (145, 140))    
-
-            # Pannello turno
-            self.screen.blit(self.PANNELLO_DUE_IMG, (1250, 80))
-            self._turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
-            self.screen.blit(self._turno_str, (1300, 90))
-            if not self.gioco_orso.is_hunter_turn():
-                self.screen.blit(self.ORSO_IDLE_IMG, (1320, 160))
-            else:
-                self.screen.blit(self.TRE_CACCIATORI_IMG, (1265, 160))
-
             # Pannello uscita
             self.screen.blit(self.USCITA_IMG, (1250, 580))
 
             # Aggiorna le caselle
             self._lista_caselle.update()
             self._lista_caselle.draw(self.screen)
+
+            # Aggiorna HUD
+            self._hud.update()
+            self._hud.draw(self.screen)
 
             # Check fine del gioco
             if self.gioco_orso.game_over():
@@ -383,11 +367,6 @@ class OrsoPyGame():
                 else:
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/cacciatori_ridono.wav'))
                     self.screen.blit(self.CACCIATORI_VINCONO, (480,380))            
-
-            # Pannello messaggi
-            self._text = self.LOBSTER_30.render(self._msg, 1, BLACK)            
-            self.screen.blit(self.PANNELLO_UNO_IMG, (40, 680))
-            self.screen.blit(self._text, (50,705))
 
             # Aggiornamento screen
             pygame.display.update()
@@ -402,6 +381,76 @@ class OrsoPyGame():
                 else:
                     self._msg = "Ricomincia l'orso"
                 self.gioco_orso.reset(numero_mosse, inizia_cacciatore)
+
+class HudTurno(pygame.sprite.Sprite):
+    '''HUD: pannello per il turno'''
+    ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
+    TRE_CACCIATORI_IMG = get_img('images/TreCacciatoriTurno.png')
+    
+    PANNELLO_DUE_IMG = get_img('images/panel.png') #panel_due
+ 
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.LOBSTER_45 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',45)
+
+        self._turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
+
+    def update(self):      
+        # Inizializzazione Pannello turno, parte fissa
+        self.game.screen.blit(HudTurno.PANNELLO_DUE_IMG, (1250, 80))        
+        self.game.screen.blit(self._turno_str, (1300, 90))          
+        if self.game.gioco_orso._is_hunter_turn:
+            self.rect = HudTurno.TRE_CACCIATORI_IMG.get_rect()
+            self.rect.x = 1265
+            self.rect.y = 160
+            self.image = HudTurno.TRE_CACCIATORI_IMG
+        else:
+            self.rect = HudTurno.ORSO_IDLE_IMG.get_rect()
+            self.rect.x = 1320
+            self.rect.y = 160
+            self.image = HudTurno.ORSO_IDLE_IMG
+
+
+class HudMosseOrso(pygame.sprite.Sprite):
+    '''HUD: pannello per il contatore mosse orso'''
+    PANNELLO_DUE_IMG = get_img('images/panel.png') #panel_due
+
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.LOBSTER_45 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',45)
+        self.LOBSTER_90 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',90)
+        # Pannello mosse orso
+        self._mosse_str = self.LOBSTER_45.render("Mosse orso", 1, BLACK)     
+            
+    def update(self):
+        self._mosse = self.LOBSTER_90.render(str(self.game.gioco_orso.get_bear_moves()), 1, BLACK)       
+        self.game.screen.blit(HudMosseOrso.PANNELLO_DUE_IMG, (80, 80))  
+        self.game.screen.blit(self._mosse_str, (90, 90))  
+        self.rect = self._mosse.get_rect()
+        self.rect.x = 145
+        self.rect.y = 140
+        self.image = self._mosse
+
+
+class HudMessaggi(pygame.sprite.Sprite):
+    '''HUD: pannello per i messaggi'''    
+    PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
+
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
+
+    def update(self):
+        self._text = self.LOBSTER_30.render(self.game._msg, 1, BLACK)
+        self.game.screen.blit(self.PANNELLO_UNO_IMG, (40, 680))
+        self.rect = self._text.get_rect()
+        self.rect.x = 50
+        self.rect.y = 705
+        self.image = self._text
+
 
 class CasellaGiocoOrso(pygame.sprite.Sprite):
     '''
