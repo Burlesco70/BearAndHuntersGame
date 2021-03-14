@@ -378,7 +378,7 @@ class OpzioneMenuNumeroMosse(pygame.sprite.Sprite):
 
     def update(self):
         self._text = self.LOBSTER_30.render(OpzioneMenuNumeroMosse.OPZIONI_MOSSE[self.mosse], 1, BLACK)
-        self.game.screen.blit(self.PANNELLO_UNO_IMG, (580, 405))
+        self.game.screen.blit(OpzioneMenuNumeroMosse.PANNELLO_UNO_IMG, (580, 405))
         self.rect = self._text.get_rect()
         self.rect.x = 600
         self.rect.y = 405
@@ -574,12 +574,10 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
         '''Valorizza l'attributo image dello sprite'''
         # Disegna la pedine ottenendo la board dall'oggetto gioco
         bb = self.game.gioco_orso
-        #print("aggiorno la casella ", self.position)
         if bb.get_board_position(self.position) == '_':
             # Controllo se è orma
             is_orma, tipo_orma  = bb.is_footprint_and_type(self.position)            
             if is_orma:
-                #print(self.position, is_orma, tipo_orma)
                 if tipo_orma == 'HUNTER':
                     self.image = CasellaGiocoOrso.ORMA_CACCIATORE_IMG
                 else:
@@ -587,13 +585,13 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
             else:
                 self.image = CasellaGiocoOrso.TRASPARENTE
         # Verifica se è orso
-        if bb.get_board_position(self.position) == '2':            
+        elif bb.get_board_position(self.position) == '2':            
             if not bb.is_hunter_turn():
                 self.image = CasellaGiocoOrso.ORSO_SEL_IMG
             else:
                 self.image = CasellaGiocoOrso.ORSO_IMG
         # Verifica se è uno dei cacciatori
-        if bb.get_board_position(self.position) == '1':
+        elif bb.get_board_position(self.position) == '1':
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_UNO_SEL_IMG
             else:
@@ -601,7 +599,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
                     self.image = CasellaGiocoOrso.CACCIATORE_UNO_IMG
                 else:
                     self.image = CasellaGiocoOrso.CACCIATORE_UNO_IDLE_IMG
-        if bb.get_board_position(self.position) == '8':
+        elif bb.get_board_position(self.position) == '8':
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_DUE_SEL_IMG
             else:
@@ -609,7 +607,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
                     self.image = CasellaGiocoOrso.CACCIATORE_DUE_IMG
                 else:
                     self.image = CasellaGiocoOrso.CACCIATORE_DUE_IDLE_IMG
-        if bb.get_board_position(self.position) == '9':
+        elif bb.get_board_position(self.position) == '9':
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_TRE_SEL_IMG
             else:
