@@ -176,7 +176,6 @@ def get_img_alpha(path):
     return pygame.image.load(path).convert_alpha()
 
 class OrsoPyGame():
-
     # Create the window
     FINESTRA_X=1536
     FINESTRA_Y=864
@@ -213,10 +212,8 @@ class OrsoPyGame():
         self.USCITA_IMG = get_img('images/back.png')
         self.USCITA_RECT = self.USCITA_IMG.get_rect()
         self.USCITA_RECT.center = (1355,675)
-
         self.ORSO_VINCE = get_img_alpha("images/Lorso-vince.png")
         self.CACCIATORI_VINCONO = get_img_alpha("images/Vincono-i-cacciatori.png")
-
         # Scacchiera
         self.BOARD_IMG = get_img('images/board.png')
 
@@ -228,15 +225,6 @@ class OrsoPyGame():
 
         self.TITOLO = get_img_alpha("images/Gioco-dellorso.png")
         self.MENU_BACKGROUND = get_img("images/3d_board.png")
-        self.INIZIA = get_img('images/buttonLong.png')
-        self.INIZIA_RECT = self.INIZIA.get_rect()
-        self.INIZIA_RECT.center = (1290, 720)
-        self.INIZIA_STR = get_img_alpha("images/Inizia-a-giocare.png")
-
-        self.ESCI_GIOCO = get_img('images/buttonLong.png')
-        self.ESCI_GIOCO_RECT = self.ESCI_GIOCO.get_rect()
-        self.ESCI_GIOCO_RECT.center = (290, 720)
-        self.ESCI_GIOCO_STR = get_img_alpha("images/Esci-dal-gioco.png")
 
     def menu(self):
         '''
@@ -246,16 +234,22 @@ class OrsoPyGame():
         pygame.mixer.music.load('sounds/intro.wav')
         pygame.mixer.music.play(-1)
 
+        # Elementi di sfondo
         self.screen.blit(self.MENU_BACKGROUND, (0, 0))#
         self.screen.blit(self.TITOLO, (500,20))
         self.screen.blit(self.ORSO_IDLE_IMG, (250, 420))
         self.screen.blit(self.TRE_CACCIATORI_IMG, (1200, 420))
         
-        self.screen.blit(self.INIZIA, (1100, 680))
-        self.screen.blit(self.INIZIA_STR, (1140, 700))
-
-        self.screen.blit(self.ESCI_GIOCO, (100, 680))
-        self.screen.blit(self.ESCI_GIOCO_STR, (170, 690))
+        # Creo gruppo sprite per menu
+        self._menu_items = pygame.sprite.Group()
+        self._m_inizio = OpzioneMenuInizioGioco(self)
+        self._menu_items.add(self._m_inizio)
+        self._m_uscita = OpzioneMenuUscita(self)
+        self._menu_items.add(self._m_uscita)
+        self._m_mosse = OpzioneMenuNumeroMosse(self)
+        self._menu_items.add(self._m_mosse)
+        self._m_inizia_cacciatore = OpzioneMenuInizoTurno(self)
+        self._menu_items.add(self._m_inizia_cacciatore)
 
         self._pos_call = (0, 0)
         self._running = True
@@ -267,23 +261,17 @@ class OrsoPyGame():
                     self._quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:                
                     self._pos_call = pygame.mouse.get_pos()
-                    # print(pos_call)
-                    # Per uscire
-                    if self.ESCI_GIOCO_RECT.collidepoint(self._pos_call):
-                        self._running = False
-                        self._quit()
-
-                    # Per iniziare il gioco
-                    if self.INIZIA_RECT.collidepoint(self._pos_call):
-                        self._running = False
-                        pygame.time.delay(800)
-                        # fade out menu music
-                        pygame.mixer.music.fadeout(800)
-                        self.game(30, True)
-
+                    for m_item in self._menu_items:
+                        if m_item.rect.collidepoint(self._pos_call):
+                            m_item.action()
+            # Aggiorna gli items di menu
+            self._menu_items.update()
+            self._menu_items.draw(self.screen)
+            # Aggiorna lo screen
             pygame.display.update()
 
     def _quit(self):
+        '''Uscita dal gioco'''
         pygame.time.delay(500)
         pygame.mixer.music.fadeout(500)
         pygame.mixer.music.stop()
@@ -291,35 +279,30 @@ class OrsoPyGame():
         sys.exit()
 
     def _menu_call(self):
+        '''Richiamo menu'''
         pygame.time.delay(500)
         pygame.mixer.music.fadeout(500)
         self.menu()
 
     def game(self, numero_mosse: int, inizia_cacciatore: bool):
-        '''
-        Gioco implementato con PyGame
-        '''
+        '''Gioco implementato con PyGame'''
         pygame.mixer.music.load('sounds/orso_music.ogg')
         pygame.mixer.music.play(-1)
-
         # Inizializza la scacchiera e il gioco
         self.gioco_orso = BearGame(numero_mosse, inizia_cacciatore)
         self._msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
-
          # Creazione gruppo elementi di HUD
         self._hud = pygame.sprite.Group()
         self._h_turno = HudTurno(self)
         self._h_mosse = HudMosseOrso(self)
-        self._h_msg = HudMessaggi(self)
+        self._h_msg = HudMessaggi(self)        
         self._hud.add(self._h_turno)
         self._hud.add(self._h_mosse)
         self._hud.add(self._h_msg)       
-        
         # Inizializzazioni
         self._running = True
         self._pos_call = (0, 0)
         self._selezione = None   
-
         while self._running:
             #self._pos_call = pygame.mouse.get_pos()
             for event in pygame.event.get():
@@ -345,32 +328,25 @@ class OrsoPyGame():
             self.clock.tick(60)
             # Disegna la scacchiera
             self.screen.blit(self.BOARD_IMG, (0, 0))
-
             # Pannello uscita
             self.screen.blit(self.USCITA_IMG, (1250, 580))
-
             # Aggiorna le caselle
             self._lista_caselle.update()
             self._lista_caselle.draw(self.screen)
-
             # Aggiorna HUD
             self._hud.update()
             self._hud.draw(self.screen)
-
             # Check fine del gioco
             if self.gioco_orso.game_over():
                 self._msg = self.gioco_orso.get_winner_display()
                 if self.gioco_orso.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
                     self.screen.blit(self.ORSO_VINCE, (580,380))            
-                    
                 else:
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/cacciatori_ridono.wav'))
                     self.screen.blit(self.CACCIATORI_VINCONO, (480,380))            
-
             # Aggiornamento screen
             pygame.display.update()
-
             # Reset del gioco
             if self.gioco_orso.game_over():
                 time.sleep(5)
@@ -382,6 +358,115 @@ class OrsoPyGame():
                     self._msg = "Ricomincia l'orso"
                 self.gioco_orso.reset(numero_mosse, inizia_cacciatore)
 
+
+# Classi opzioni di menu
+class OpzioneMenuNumeroMosse(pygame.sprite.Sprite):
+    '''Menu: numero mosse'''
+    PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
+    OPZIONI_MOSSE = {
+        20:'Partita veloce (20 mosse)',
+        30:'Partita standard (30 mosse)',
+        40:'Partita classica (40 mosse)'
+        }
+
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
+        # 30 mosse è il default
+        self.mosse = 30
+
+    def update(self):
+        self._text = self.LOBSTER_30.render(OpzioneMenuNumeroMosse.OPZIONI_MOSSE[self.mosse], 1, BLACK)
+        self.game.screen.blit(self.PANNELLO_UNO_IMG, (580, 405))
+        self.rect = self._text.get_rect()
+        self.rect.x = 600
+        self.rect.y = 405
+        self.image = self._text
+
+    def action(self):
+        self.mosse += 10
+        if self.mosse == 50:
+            self.mosse = 20
+
+
+class OpzioneMenuInizoTurno(pygame.sprite.Sprite):
+    '''Menu: turno'''
+    OPZIONI_TURNO = {
+        True:'Iniziano i cacciatori',
+        False:"Inizia l'orso"
+        }
+
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
+        # Iniziano i cacciatori è il default
+        self.inziano_cacciatori = True
+
+    def update(self):
+        self._text = self.LOBSTER_30.render(
+            OpzioneMenuInizoTurno.OPZIONI_TURNO[self.inziano_cacciatori], 
+            1, 
+            BLACK)
+        self.rect = self._text.get_rect()
+        self.rect.x = 600
+        self.rect.y = 455
+        self.image = self._text
+
+    def action(self):
+        self.inziano_cacciatori = not(self.inziano_cacciatori)
+
+
+class OpzioneMenuUscita(pygame.sprite.Sprite):
+    '''Menu: uscita'''
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.ESCI_GIOCO = get_img('images/buttonLong.png')
+        self.ESCI_GIOCO_STR = get_img_alpha("images/Esci-dal-gioco.png")
+
+
+    def update(self):
+        self.game.screen.blit(self.ESCI_GIOCO, (100, 680))
+        self.rect = self.ESCI_GIOCO_STR.get_rect()
+        self.rect.x = 170
+        self.rect.y = 690
+        self.image = self.ESCI_GIOCO_STR
+
+    def action(self):
+        self.game._running = False
+        self.game._quit()
+    
+
+class OpzioneMenuInizioGioco(pygame.sprite.Sprite):
+    '''Menu: inizio'''
+    def __init__(self, game: OrsoPyGame):
+        super().__init__()
+        self.game = game
+        self.INIZIA = get_img('images/buttonLong.png')
+        self.INIZIA_STR = get_img_alpha("images/Inizia-a-giocare.png")
+
+
+    def update(self):
+        self.game.screen.blit(self.INIZIA, (1100, 680))
+        self.rect = self.INIZIA_STR.get_rect()
+        self.rect.x = 1140
+        self.rect.y = 700
+        self.image = self.INIZIA_STR
+
+    def action(self):
+        self.game._running = False
+        pygame.time.delay(800)
+        # fade out menu music
+        pygame.mixer.music.fadeout(800)
+        self.game.game(
+            self.game._m_mosse.mosse, 
+            self.game._m_inizia_cacciatore.inziano_cacciatori
+        )
+  
+
+# Classi HUD di gioco
 class HudTurno(pygame.sprite.Sprite):
     '''HUD: pannello per il turno'''
     ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
@@ -396,7 +481,7 @@ class HudTurno(pygame.sprite.Sprite):
 
         self._turno_str = self.LOBSTER_45.render("Turno", 1, BLACK)
 
-    def update(self):      
+    def update(self): 
         # Inizializzazione Pannello turno, parte fissa
         self.game.screen.blit(HudTurno.PANNELLO_DUE_IMG, (1250, 80))        
         self.game.screen.blit(self._turno_str, (1300, 90))          
