@@ -48,8 +48,10 @@ https://vallecervobiella.wordpress.com/il-gioco-dellorso/
 * Graphical with Tkinter _- DONE_
 * Graphical with PyGame _- DONE_ (Game labels and comments in Italian)
 
-Thanks for PyGame lessons to Michele Pugno
-Thanks for the assets in PyGame version to Stefano Gunella and Enrico Battuello
+Thanks for PyGame lessons to Michele Pugno.
+
+Thanks for the assets in PyGame version to Stefano Gunella and Enrico Battuello.
+
 Music "Games Worldbeat" by Bernardo R. from http://freesound.org
 
 ### Steps on game ###
