@@ -246,9 +246,18 @@ class OrsoPyGame():
         self._menu_items.add(self._m_inizio)
         self._m_uscita = OpzioneMenuUscita(self)
         self._menu_items.add(self._m_uscita)
-        self._m_mosse = OpzioneMenuNumeroMosse(self)
+        self.OPZIONI_MOSSE = {
+            20:'Partita veloce (20 mosse)',
+            30:'Partita standard (30 mosse)',
+            40:'Partita classica (40 mosse)'
+        }
+        self._m_mosse = OpzioneMenuNumeroMosse(self.OPZIONI_MOSSE, 30, self, (580,395))
         self._menu_items.add(self._m_mosse)
-        self._m_inizia_cacciatore = OpzioneMenuInizoTurno(self)
+        self.OPZIONI_TURNO = {
+            True:'Iniziano i cacciatori',
+            False:"Inizia l'orso"
+            }
+        self._m_inizia_cacciatore = OpzioneMenuInizoTurno(self.OPZIONI_TURNO, True, self, (580,485))            
         self._menu_items.add(self._m_inizia_cacciatore)
 
         self._pos_call = (0, 0)
@@ -360,62 +369,49 @@ class OrsoPyGame():
 
 
 # Classi opzioni di menu
-class OpzioneMenuNumeroMosse(pygame.sprite.Sprite):
-    '''Menu: numero mosse'''
+class OpzioneMenu(pygame.sprite.Sprite):
+    '''
+    Classe generica di opzione menu, richiede
+    - opzioni come dizionario valore:voce da visualizzare
+    - valore iniziale di default
+    - gioco orso
+    - posizione del pannello di sfondo
+    '''
     PANNELLO_UNO_IMG = get_img('images/buttonLong.png') #panel
-    OPZIONI_MOSSE = {
-        20:'Partita veloce (20 mosse)',
-        30:'Partita standard (30 mosse)',
-        40:'Partita classica (40 mosse)'
-        }
-
-    def __init__(self, game: OrsoPyGame):
-        super().__init__()
-        self.game = game
-        self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
-        # 30 mosse è il default
-        self.mosse = 30
-
-    def update(self):
-        self._text = self.LOBSTER_30.render(OpzioneMenuNumeroMosse.OPZIONI_MOSSE[self.mosse], 1, BLACK)
-        self.game.screen.blit(OpzioneMenuNumeroMosse.PANNELLO_UNO_IMG, (580, 405))
-        self.rect = self._text.get_rect()
-        self.rect.x = 600
-        self.rect.y = 405
-        self.image = self._text
-
-    def action(self):
-        self.mosse += 10
-        if self.mosse == 50:
-            self.mosse = 20
-
-
-class OpzioneMenuInizoTurno(pygame.sprite.Sprite):
-    '''Menu: turno'''
-    OPZIONI_TURNO = {
-        True:'Iniziano i cacciatori',
-        False:"Inizia l'orso"
-        }
-
-    def __init__(self, game: OrsoPyGame):
+    def __init__(self, opzioni: dict, default_value: object, game: OrsoPyGame, position: tuple):
         super().__init__()
         self.game = game
         self.LOBSTER_30 = pygame.font.Font('fonts/LobsterTwo-Regular.otf',30)
         # Iniziano i cacciatori è il default
-        self.inziano_cacciatori = True
+        self.value = default_value
+        self.opzioni = opzioni
+        self.position = position
 
     def update(self):
+        self.game.screen.blit(OpzioneMenuNumeroMosse.PANNELLO_UNO_IMG, self.position)
         self._text = self.LOBSTER_30.render(
-            OpzioneMenuInizoTurno.OPZIONI_TURNO[self.inziano_cacciatori], 
+            self.opzioni[self.value], 
             1, 
             BLACK)
         self.rect = self._text.get_rect()
-        self.rect.x = 600
-        self.rect.y = 455
+        self.rect.x = self.position[0]+20
+        self.rect.y = self.position[1]+25
         self.image = self._text
 
     def action(self):
-        self.inziano_cacciatori = not(self.inziano_cacciatori)
+        raise NotImplementedError("Action must be implemented by child class")
+
+
+class OpzioneMenuInizoTurno(OpzioneMenu):
+    def action(self):
+        self.value = not(self.value)
+
+
+class OpzioneMenuNumeroMosse(OpzioneMenu):
+    def action(self):
+        self.value += 10
+        if self.value == 50:
+            self.value = 20
 
 
 class OpzioneMenuUscita(pygame.sprite.Sprite):
@@ -461,8 +457,8 @@ class OpzioneMenuInizioGioco(pygame.sprite.Sprite):
         # fade out menu music
         pygame.mixer.music.fadeout(800)
         self.game.game(
-            self.game._m_mosse.mosse, 
-            self.game._m_inizia_cacciatore.inziano_cacciatori
+            self.game._m_mosse.value, 
+            self.game._m_inizia_cacciatore.value
         )
   
 
