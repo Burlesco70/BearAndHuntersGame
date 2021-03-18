@@ -1,3 +1,9 @@
+'''
+Versione del gioco dopo la prima lezione su PyGame
+https://youtu.be/rdT_Z23YRAY
+ovvero senza utilizzo di Sprites e gruppi di collisioni
+'''
+
 import pygame
 import time
 import sys

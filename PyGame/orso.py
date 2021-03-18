@@ -1,3 +1,12 @@
+'''
+Versione del gioco "finale" dopo il corso su PyGame
+1 - https://youtu.be/rdT_Z23YRAY
+2 - https://youtu.be/xG4IKcAzMCw
+3 - https://youtu.be/V3VuqFeJ1hc
+ovvero con utilizzo di Sprites e gruppi di collisioni
+e maggiore orientamento OOP
+'''
+
 import pygame
 import time
 import sys
