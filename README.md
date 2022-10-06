@@ -47,10 +47,13 @@ https://vallecervobiella.wordpress.com/il-gioco-dellorso/
 * Text _- DONE_
 * Graphical with Tkinter _- DONE_
 * Graphical with PyGame _- DONE_ (Game labels and comments in Italian)
+* Graphical with PyGame and Bear AI _- DONE with main contribution of Angelo Huang (Flecart)_ (Game labels and comments in Italian)
 
 Thanks for PyGame lessons to Michele Pugno.
 
 Thanks for the assets in PyGame version to Stefano Gunella and Enrico Battuello.
+
+Thanks for Bear AI implementation to Angelo Huang (Flecart).
 
 Music "Games Worldbeat" by Bernardo R. from http://freesound.org
 
