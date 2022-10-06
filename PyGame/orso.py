@@ -7,10 +7,20 @@ ovvero con utilizzo di Sprites e gruppi di collisioni
 e maggiore orientamento OOP
 '''
 
+from json.encoder import INFINITY
+import os
 import pygame
 import time
 import sys
 import functools
+import random
+import pickle
+
+# temporary folder for PyInstaller
+try:
+    base_path = sys._MEIPASS
+except AttributeError:
+    base_path = os.path.abspath(".")
 
 # Palette - RGB colors
 BLACK = (0, 0, 0)
@@ -24,11 +34,39 @@ class BearGame:
     1-8-9 means hunters; 
     2 means bear;
     '''
-    def __init__(self, max_bear_moves: int, hunter_starts: bool):
+    # Winner messages and settings
+    HUNTERS_WIN = 'Hanno vinto i cacciatori!'
+    BEAR_WINS = "Ha vinto l'orso, congratulazioni"
+    
+    BOARD_POSITIONS = 20
+    # Adjacent positions in the board, list index is the board  position
+    ADJACENT_POSITIONS = [[1,2,3], #0
+                          [0,3,4],
+                          [0,3,6], #2
+                          [0,1,2,5],
+                          [1,7,8], #4
+                          [3,9,10,11],
+                          [2,12,13], #6
+                          [4,8,14],
+                          [7,4,14,9], #8
+                          [8, 10,5,15],
+                          [5,9,11,15],#10
+                          [5,10,15,12],
+                          [11,6,16,13],#12
+                          [6,12,16],
+                          [7,8,18],#14
+                          [9,10,11,17],
+                          [12,13,19], #16
+                          [15,18,19,20],
+                          [14,17,20], #18
+                          [16, 17, 20],
+                          [18, 17, 19]]
+
+    def __init__(self, player_mode: int, max_bear_moves: int, hunter_starts: bool):
         # Start settings
-        self.reset(max_bear_moves, hunter_starts)
+        self.reset(player_mode, max_bear_moves, hunter_starts)
         
-    def reset(self, max_bear_moves: int, hunter_starts: bool) -> None:
+    def reset(self, player_mode: int, max_bear_moves: int, hunter_starts: bool) -> None:
         # Start and reset settings
         self._board = ['1', '8', '9', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '2']
         self._bear_position = 20
@@ -36,7 +74,15 @@ class BearGame:
         self._hunter_starting_pos = -1
         # From external configuration
         self._is_hunter_turn = hunter_starts        
-        self._max_bear_moves = max_bear_moves 
+        self._max_bear_moves = max_bear_moves
+        self.player_mode = player_mode
+        self._winner = None
+        self._last_move = None
+        self._bear_player = Player("orso")
+        self._bear_player.load_policy(
+            os.path.join(base_path, "bear.policy")
+        )
+
 
     def get_bear_moves(self) -> int:
         '''
@@ -54,12 +100,6 @@ class BearGame:
     def get_board_position(self, position:int) -> str:
         return self._board[position]
 
-    def get_board_length(self) -> int:
-        '''
-        Return the length of the board
-        '''
-        return len(self._board)
-
     def get_hunter_starting_pos(self) -> int:
         return self._hunter_starting_pos
     
@@ -70,15 +110,19 @@ class BearGame:
         if (self._bear_moves >= self._max_bear_moves):
             return True
 
-    def get_winner_display(self) -> str:
-        '''Returns the winner in a string type for display purposes'''
-        if not(self.get_possible_moves(self._bear_position)):
-            return 'Hanno vinto i cacciatori!'
-        if (self._bear_moves >= self._max_bear_moves):
-            return "Ha vinto l'orso, congratulazioni"
+    # def get_winner_display(self) -> str:
+    #     '''Returns the winner in a string type for display purposes'''
+    #     if not(self.get_possible_moves(self._bear_position)):
+    #         return 'Hanno vinto i cacciatori!'
+    #     if (self._bear_moves >= self._max_bear_moves):
+    #         return "Ha vinto l'orso, congratulazioni"
 
     def game_over(self) -> bool:
-        if ( ( not(self.get_possible_moves(self._bear_position)) ) or (self._bear_moves >= self._max_bear_moves) ):
+        if not(self.get_possible_moves(self._bear_position)):
+            self._winner = BearGame.HUNTERS_WIN
+            return True
+        elif (self._bear_moves >= self._max_bear_moves):
+            self._winner = BearGame.BEAR_WINS
             return True
         else:
             return False
@@ -111,6 +155,136 @@ class BearGame:
                 self._hunter_starting_pos = -1
                 return "Posizione non valida!"
     
+    def manage_ai_hunter_selection(self) -> str:
+        '''
+        Implement stupid random logic
+        '''
+        # Simula il comportamento umano: prima sceglie il cacciatore
+        if (self._hunter_starting_pos == -1):
+            # Cerca le posizioni dei cacciatori
+            # self._hunter_starting_pos = -1
+            hunter_positions = []
+            for x in range(self.BOARD_POSITIONS):
+                if self._board[x] == '1' or self._board[x] == '8' or self._board[x] == '9':
+                    hunter_positions.append(x)
+            #print("Board", self._board)
+            #print("Posizioni cacciatori", hunter_positions)
+            # Sceglie cacciatore a caso
+            random_hunter = random.randint(0,2)
+            # Posizione del cacciatore
+            stupid_hunter_selection = hunter_positions[random_hunter]
+            # Verifica che abbia almeno una mossa disponibile... altrimenta va dagli altri
+            move_options = len(self.get_possible_moves(stupid_hunter_selection))
+            #print("Posizione cacciatore casuale", stupid_hunter_selection)
+            while move_options <= 0:
+                random_hunter = (random_hunter + 1) % 3
+                stupid_hunter_selection = hunter_positions[random_hunter]
+                #print("Posizione cacciatore casuale", stupid_hunter_selection)
+                move_options = len(self.get_possible_moves(stupid_hunter_selection))
+            self._hunter_starting_pos = stupid_hunter_selection
+            #print(move_options, self._hunter_starting_pos)
+            return "Cacciatore selezionato"
+        # Poi la mossa
+        else:
+            # Seleziona la mossa causale
+            # Move options
+            move_options = len(self.get_possible_moves(self._hunter_starting_pos))
+            # Select random move
+            stupid_hunter_new_pos = self.get_possible_moves(self._hunter_starting_pos)[random.randint(0,move_options-1)]          
+            # Selected hunter makes the move        
+            hunter_to_move = self._board[self._hunter_starting_pos]
+            self._board[self._hunter_starting_pos] = '_'
+            self._board[stupid_hunter_new_pos] = hunter_to_move
+            self._hunter_starting_pos = -1
+            self._is_hunter_turn = not(self._is_hunter_turn)
+            time.sleep(1)
+            return "Orso, scegli la tua mossa!"
+
+    def get_bear_actions(self):
+        actions = []
+        for adj in BearGame.ADJACENT_POSITIONS[self._bear_position]:
+            if self._board[adj] == '_':
+                actions.append((self._bear_position, adj))
+        return actions
+
+    def move_bear(self, new_position: int) -> None:
+        '''
+        Move bear to a random position
+        '''
+        self._last_move = (self._bear_position, new_position)
+        if new_position in self.get_possible_moves(self._bear_position):
+            self._board[self._bear_position] = '_'
+            self._board[new_position] = '2'
+            self._bear_position = new_position
+            self._bear_moves += 1
+            self._is_hunter_turn = not self._is_hunter_turn
+        else:
+            print(self._last_move)
+            raise ValueError("Orso non può muoversi qui!")
+
+    def get_winner(self):
+        return self._winner
+
+    def get_hash(self) -> str:
+        '''
+        Return a hash of the board
+        '''
+        board = self._board.copy()
+        # normalize the hunter ids
+        for i in range(len(board)):
+            if board[i] == '8' or board[i] == '9':
+                board[i] = '1'
+        return ''.join(board)
+
+    def undo_move(self):
+        self._is_hunter_turn = not self._is_hunter_turn
+        target_position, starting_position = self._last_move  # contrario!
+        self._board[starting_position] = '_'
+        if self._is_hunter_turn:
+            self._board[target_position] = '1'
+        else:
+            self._bear_moves -= 1
+            self._bear_position = target_position
+            self._board[target_position] = '2'
+        self._last_move = None
+
+
+
+    def move_player(self, start_pos, end_pos) -> str:
+        '''
+        Move player to a random position
+        '''
+        if self._is_hunter_turn:
+            return self.move_hunter(start_pos, end_pos)
+        else:
+            return self.move_bear(end_pos)
+
+
+    def manage_ai_smart_bear_selection(self) -> str:
+        '''
+        Implement AI logic
+        '''
+        bear_actions = self.get_bear_actions()
+        action = self._bear_player.get_action(bear_actions, self)
+        self.move_bear(action[1])
+        return "Orso intelligente ha mosso!!!"
+    
+    def manage_ai_bear_selection(self) -> str:
+        '''
+        Implement stupid random logic
+        '''
+        move_options = len(self.get_possible_moves(self._bear_position))
+        stupid_bear_new_pos = self.get_possible_moves(self._bear_position)[random.randint(0,move_options-1)]
+        #print(move_options, bear_pos)
+        time.sleep(1)
+        # Bear makes the move
+        self._board[self._bear_position] = '_'
+        self._board[stupid_bear_new_pos] = '2'
+        self._bear_moves += 1
+        self._bear_position = stupid_bear_new_pos
+        self._is_hunter_turn = not(self._is_hunter_turn)
+        return "Seleziona uno dei cacciatori!"
+
     def manage_bear_selection(self,sel: int) -> str:
         '''Input selection from user; return user message to display'''
         if sel in self.get_possible_moves(self._bear_position):
@@ -145,31 +319,12 @@ class BearGame:
                 return (False, None)
 
     def get_possible_moves(self, position: int) -> list:
-        '''Adjacent locations, index is position'''
-        adjacent = [[1,2,3], #0
-                [0,3,4],
-                [0,3,6], #2
-                [0,1,2,5],
-                [1,7,8], #4
-                [3,9,10,11],
-                [2,12,13], #6
-                [4,8,14],
-                [7,4,14,9], #8
-                [8, 10,5,15],
-                [5,9,11,15],#10
-                [5,10,15,12],
-                [11,6,16,13],#12
-                [6,12,16],
-                [7,8,18],#14
-                [9,10,11,17],
-                [12,13,19], #16
-                [15,18,19,20],
-                [14,17,20], #18
-                [16, 17, 20],
-                [18, 17, 19]]
+        '''
+        Returns the list with possible free (_) positions
+        '''
         moves = []
         #Check free positions
-        for x in adjacent[position]:
+        for x in BearGame.ADJACENT_POSITIONS[position]:
             if self._board[x] == '_':
                 moves.append(x)
         return moves
@@ -193,7 +348,8 @@ class OrsoPyGame():
     def __init__(self):
         # Initialize pygame
         pygame.init()
-        self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y))
+        #self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y))
+        self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y), pygame.FULLSCREEN)
         pygame.display.set_caption("Gioco dell'orso")
         # set game clock
         self.clock = pygame.time.Clock()
@@ -255,18 +411,30 @@ class OrsoPyGame():
         self._menu_items.add(self._m_inizio)
         self._m_uscita = OpzioneMenuUscita(self)
         self._menu_items.add(self._m_uscita)
-        self.OPZIONI_MOSSE = {
-            20:'Partita veloce (20 mosse)',
-            30:'Partita standard (30 mosse)',
-            40:'Partita classica (40 mosse)'
+        
+        # Voci menu centrale
+        # Opzione menu Player Vs AI
+        self.OPZIONI_PLAYER_MODE = {
+            10:"Gioca contro l'orso intelligente      ",
+            20:'Gioca contro i cacciatori stupidi     ',
+            30:'Gioca contro un amico                 ',
         }
-        self._m_mosse = OpzioneMenuNumeroMosse(self.OPZIONI_MOSSE, 30, self, (580,395))
+        self._m_pl_mode = OpzioneMenuPlayerType(self.OPZIONI_PLAYER_MODE, 10, self, (580,350)) #305
+        self._menu_items.add(self._m_pl_mode)
+        # Opzione menu Mosse
+        self.OPZIONI_MOSSE = {
+            20:'Partita veloce (20 mosse)              ',
+            30:'Partita standard (30 mosse)            ',
+            40:'Partita classica (40 mosse)            '
+        }
+        self._m_mosse = OpzioneMenuNumeroMosse(self.OPZIONI_MOSSE, 30, self, (580,440))
         self._menu_items.add(self._m_mosse)
+        # Opzione menu Turno
         self.OPZIONI_TURNO = {
-            True:'Iniziano i cacciatori',
-            False:"Inizia l'orso"
+            True:'Iniziano i cacciatori                ',
+            False:"Inizia l'orso                       "
             }
-        self._m_inizia_cacciatore = OpzioneMenuInizoTurno(self.OPZIONI_TURNO, True, self, (580,485))            
+        self._m_inizia_cacciatore = OpzioneMenuInizoTurno(self.OPZIONI_TURNO, True, self, (580,530)) 
         self._menu_items.add(self._m_inizia_cacciatore)
 
         self._pos_call = (0, 0)
@@ -302,12 +470,12 @@ class OrsoPyGame():
         pygame.mixer.music.fadeout(500)
         self.menu()
 
-    def game(self, numero_mosse: int, inizia_cacciatore: bool):
+    def game(self, player_mode: int, numero_mosse: int, inizia_cacciatore: bool):
         '''Gioco implementato con PyGame'''
         pygame.mixer.music.load('sounds/orso_music.ogg')
         pygame.mixer.music.play(-1)
         # Inizializza la scacchiera e il gioco
-        self.gioco_orso = BearGame(numero_mosse, inizia_cacciatore)
+        self.gioco_orso = BearGame(player_mode, numero_mosse, inizia_cacciatore)
         self._msg = "L'orso vince facendo "+str(self.gioco_orso.get_max_bear_moves())+" mosse"
          # Creazione gruppo elementi di HUD
         self._hud = pygame.sprite.Group()
@@ -322,7 +490,13 @@ class OrsoPyGame():
         self._pos_call = (0, 0)
         self._selezione = None   
         while self._running:
-            #self._pos_call = pygame.mouse.get_pos()
+            # Se è turno AI deve procedere senza verificare click utente
+            if (self.gioco_orso.player_mode == 10) and (not self.gioco_orso.is_hunter_turn()):
+                #self._msg = self.gioco_orso.manage_ai_bear_selection()
+                self._msg = self.gioco_orso.manage_ai_smart_bear_selection()
+            if (self.gioco_orso.player_mode == 20) and (self.gioco_orso.is_hunter_turn()):
+                self._msg = self.gioco_orso.manage_ai_hunter_selection()
+            # Check eventi
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
@@ -339,10 +513,15 @@ class OrsoPyGame():
                             self._selezione = casella_cliccata.position
                             # Controlla e aggiorna gli spostamenti nella scacchiera
                             # Se click in posizione non corretta, ritorna solo un messaggio
-                            if (self.gioco_orso.is_hunter_turn()):
-                                self._msg = self.gioco_orso.manage_hunter_selection(self._selezione)
-                            else:
-                                self._msg = self.gioco_orso.manage_bear_selection(self._selezione)                        
+                            if self.gioco_orso.player_mode == 30:                                
+                                if (self.gioco_orso.is_hunter_turn()):
+                                    self._msg = self.gioco_orso.manage_hunter_selection(self._selezione)
+                                else:
+                                    self._msg = self.gioco_orso.manage_bear_selection(self._selezione)
+                            elif ((self.gioco_orso.player_mode == 10) and (self.gioco_orso.is_hunter_turn())):                                    
+                                    self._msg = self.gioco_orso.manage_hunter_selection(self._selezione)
+                            elif ((not self.gioco_orso.is_hunter_turn()) and (self.gioco_orso.player_mode == 20)):                                    
+                                    self._msg = self.gioco_orso.manage_bear_selection(self._selezione)
             self.clock.tick(60)
             # Disegna la scacchiera
             self.screen.blit(self.BOARD_IMG, (0, 0))
@@ -356,13 +535,14 @@ class OrsoPyGame():
             self._hud.draw(self.screen)
             # Check fine del gioco
             if self.gioco_orso.game_over():
-                self._msg = self.gioco_orso.get_winner_display()
+                #self._msg = self.gioco_orso.get_winner_display()
+                self._msg = self.gioco_orso._winner
                 if self.gioco_orso.is_bear_winner():
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/orso_ride.wav'))
-                    self.screen.blit(self.ORSO_VINCE, (580,380))            
+                    self.screen.blit(self.ORSO_VINCE, (580,380))
                 else:
                     pygame.mixer.Channel(1).play(pygame.mixer.Sound('sounds/cacciatori_ridono.wav'))
-                    self.screen.blit(self.CACCIATORI_VINCONO, (480,380))            
+                    self.screen.blit(self.CACCIATORI_VINCONO, (480,380))
             # Aggiornamento screen
             pygame.display.update()
             # Reset del gioco
@@ -374,7 +554,7 @@ class OrsoPyGame():
                     self._msg = "Ricominciano i cacciatori"
                 else:
                     self._msg = "Ricomincia l'orso"
-                self.gioco_orso.reset(numero_mosse, inizia_cacciatore)
+                self.gioco_orso.reset(player_mode, numero_mosse, inizia_cacciatore)
 
 
 # Classi opzioni di menu
@@ -414,6 +594,13 @@ class OpzioneMenu(pygame.sprite.Sprite):
 class OpzioneMenuInizoTurno(OpzioneMenu):
     def action(self):
         self.value = not(self.value)
+
+
+class OpzioneMenuPlayerType(OpzioneMenu):
+    def action(self):
+        self.value += 10
+        if self.value == 40:
+            self.value = 10
 
 
 class OpzioneMenuNumeroMosse(OpzioneMenu):
@@ -466,6 +653,7 @@ class OpzioneMenuInizioGioco(pygame.sprite.Sprite):
         # fade out menu music
         pygame.mixer.music.fadeout(800)
         self.game.game(
+            self.game._m_pl_mode.value,
             self.game._m_mosse.value, 
             self.game._m_inizia_cacciatore.value
         )
@@ -620,6 +808,80 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
                     self.image = CasellaGiocoOrso.CACCIATORE_TRE_IMG
                 else:
                     self.image = CasellaGiocoOrso.CACCIATORE_TRE_IDLE_IMG
+
+
+class Player:
+    def __init__(self, name):
+        self.name = name
+        self.states_value = {}  # state -> value
+
+    def get_action(self, actions, current_board: OrsoPyGame):
+        value_max = -INFINITY
+        for act in actions:
+            current_board.move_player(act[0], act[1])
+            state_value = self.states_value.get(current_board.get_hash())
+            if (state_value is None):
+                value = 0
+            else:
+                value = state_value
+
+            if value >= value_max:
+                value_max = value
+                action = act
+
+            current_board.undo_move()
+        return action
+
+    def print_value(self, board):
+        print(
+            f"{self.name}: {board.get_hash()} -> "
+            f"{self.states_value.get(board.get_hash())}"
+        )
+
+    def load_policy(self, file):
+        with open(file, 'rb') as file_read:
+            data = pickle.load(file_read)
+
+        self.states_value = (
+            data if 'states_value' not in data else  # data legacy support
+            data['states_value']
+        )
+
+
+class AIPlayer:
+    '''
+    AI Player class
+    '''
+    INFINITY = 1000000
+
+    def __init__(self, name):
+        self.name = name
+        self.states_value = {}  # state -> value
+
+    def get_action(self, actions, current_board: OrsoPyGame):
+        value_max = -self.INFINITY
+        for act in actions:
+            current_board.move_player(act[0], act[1])
+            state_value = self.states_value.get(current_board.get_hash())
+            if (state_value is None):
+                value = 0
+            else:
+                value = state_value
+
+            if value >= value_max:
+                value_max = value
+                action = act
+
+            current_board.undo_move()
+        return action
+
+    def print_value(self, board):
+        print(f"{self.name}: {board.get_hash()} -> {self.states_value.get(board.get_hash())}")
+
+    def load_policy(self, file):
+        fr = open(file, 'rb')
+        self.states_value = pickle.load(fr)
+        fr.close()
 
 
 # Main
