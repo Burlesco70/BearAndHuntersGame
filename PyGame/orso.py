@@ -5,7 +5,10 @@ Versione del gioco "finale" dopo il corso su PyGame
 3 - https://youtu.be/V3VuqFeJ1hc
 ovvero con utilizzo di Sprites e gruppi di collisioni
 e maggiore orientamento OOP
+10-2022 - Aggiunta AI Orso
 '''
+
+from __future__ import annotations
 
 from json.encoder import INFINITY
 import os
@@ -16,7 +19,7 @@ import functools
 import random
 import pickle
 
-# temporary folder for PyInstaller
+# Temporary folder for PyInstaller
 try:
     base_path = sys._MEIPASS
 except AttributeError:
@@ -25,20 +28,30 @@ except AttributeError:
 # Palette - RGB colors
 BLACK = (0, 0, 0)
 
+# Symbols for the board of game
+BOARD_HUNTER_1 = '1'
+BOARD_HUNTER_2 = '8'
+BOARD_HUNTER_3 = '9'
+BOARD_BEAR = '2'
+BOARD_EMPTY = '_'
+# Symbols for the board of policy
+# Unlink dependency logic between board game and board policy
+BOARD_HUNTER_POLICY = '1'
+
 class BearGame:
     '''
     PyGame independent game class
     Class for logical board and game model
-    20 positions:
+    21 positions:
     _ means empty;
     1-8-9 means hunters; 
     2 means bear;
     '''
     # Winner messages and settings
     HUNTERS_WIN = 'Hanno vinto i cacciatori!'
-    BEAR_WINS = "Ha vinto l'orso, congratulazioni"
+    BEAR_WINS = "Ha vinto l'orso, congratulazioni"    
     
-    BOARD_POSITIONS = 20
+    BOARD_POSITIONS = 21
     # Adjacent positions in the board, list index is the board  position
     ADJACENT_POSITIONS = [[1,2,3], #0
                           [0,3,4],
@@ -68,7 +81,10 @@ class BearGame:
         
     def reset(self, player_mode: int, max_bear_moves: int, hunter_starts: bool) -> None:
         # Start and reset settings
-        self._board = ['1', '8', '9', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '2']
+        self._board = [BOARD_HUNTER_1, BOARD_HUNTER_2, BOARD_HUNTER_3, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY,
+                       BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY,
+                       BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_BEAR]
+        # Init settings
         self._bear_position = 20
         self._bear_moves = 0
         self._hunter_starting_pos = -1
@@ -78,6 +94,7 @@ class BearGame:
         self.player_mode = player_mode
         self._winner = None
         self._last_move = None
+        # Reinforcement learning loading for Bear AI
         self._bear_player = Player("orso")
         self._bear_player.load_policy(
             os.path.join(base_path, "bear.policy")
@@ -98,9 +115,15 @@ class BearGame:
         return self._max_bear_moves
 
     def get_board_position(self, position:int) -> str:
+        '''
+        Return the pown of the input position
+        '''
         return self._board[position]
 
     def get_hunter_starting_pos(self) -> int:
+        '''
+        Return the hunter starting position
+        '''
         return self._hunter_starting_pos
     
     def is_bear_winner(self) -> bool:
@@ -110,14 +133,8 @@ class BearGame:
         if (self._bear_moves >= self._max_bear_moves):
             return True
 
-    # def get_winner_display(self) -> str:
-    #     '''Returns the winner in a string type for display purposes'''
-    #     if not(self.get_possible_moves(self._bear_position)):
-    #         return 'Hanno vinto i cacciatori!'
-    #     if (self._bear_moves >= self._max_bear_moves):
-    #         return "Ha vinto l'orso, congratulazioni"
-
     def game_over(self) -> bool:
+        '''Check for game over'''
         if not(self.get_possible_moves(self._bear_position)):
             self._winner = BearGame.HUNTERS_WIN
             return True
@@ -128,9 +145,11 @@ class BearGame:
             return False
 
     def is_hunter(self, selection:str) -> bool:
-        return selection in ['1','8','9']
+        '''Check if selection is an hunter'''
+        return selection in [BOARD_HUNTER_1, BOARD_HUNTER_2, BOARD_HUNTER_3]
 
     def is_hunter_turn(self) -> bool:
+        '''Check if is it the hunter turn'''
         return self._is_hunter_turn
 
     def manage_hunter_selection(self, sel:int) -> str:
@@ -146,7 +165,7 @@ class BearGame:
         else: # Finding final position for hunter
             if sel in self.get_possible_moves(self._hunter_starting_pos):
                 selected_hunter = self._board[self._hunter_starting_pos]
-                self._board[self._hunter_starting_pos] = '_'
+                self._board[self._hunter_starting_pos] = BOARD_EMPTY
                 self._board[sel] = selected_hunter
                 self._hunter_starting_pos = -1
                 self._is_hunter_turn = not(self._is_hunter_turn)
@@ -165,7 +184,7 @@ class BearGame:
             # self._hunter_starting_pos = -1
             hunter_positions = []
             for x in range(self.BOARD_POSITIONS):
-                if self._board[x] == '1' or self._board[x] == '8' or self._board[x] == '9':
+                if self._board[x] == BOARD_HUNTER_1 or self._board[x] == BOARD_HUNTER_2 or self._board[x] == BOARD_HUNTER_3:
                     hunter_positions.append(x)
             #print("Board", self._board)
             #print("Posizioni cacciatori", hunter_positions)
@@ -193,17 +212,20 @@ class BearGame:
             stupid_hunter_new_pos = self.get_possible_moves(self._hunter_starting_pos)[random.randint(0,move_options-1)]          
             # Selected hunter makes the move        
             hunter_to_move = self._board[self._hunter_starting_pos]
-            self._board[self._hunter_starting_pos] = '_'
+            self._board[self._hunter_starting_pos] = BOARD_EMPTY
             self._board[stupid_hunter_new_pos] = hunter_to_move
             self._hunter_starting_pos = -1
             self._is_hunter_turn = not(self._is_hunter_turn)
             time.sleep(1)
             return "Orso, scegli la tua mossa!"
 
-    def get_bear_actions(self):
+    def get_bear_actions(self) -> list[(int, int)]:
+        '''
+        Return a list of tuples with starting pos and next possible move
+        '''
         actions = []
         for adj in BearGame.ADJACENT_POSITIONS[self._bear_position]:
-            if self._board[adj] == '_':
+            if self._board[adj] == BOARD_EMPTY:
                 actions.append((self._bear_position, adj))
         return actions
 
@@ -213,8 +235,8 @@ class BearGame:
         '''
         self._last_move = (self._bear_position, new_position)
         if new_position in self.get_possible_moves(self._bear_position):
-            self._board[self._bear_position] = '_'
-            self._board[new_position] = '2'
+            self._board[self._bear_position] = BOARD_EMPTY
+            self._board[new_position] = BOARD_BEAR
             self._bear_position = new_position
             self._bear_moves += 1
             self._is_hunter_turn = not self._is_hunter_turn
@@ -222,33 +244,30 @@ class BearGame:
             print(self._last_move)
             raise ValueError("Orso non può muoversi qui!")
 
-    def get_winner(self):
-        return self._winner
-
     def get_hash(self) -> str:
         '''
         Return a hash of the board
         '''
         board = self._board.copy()
-        # normalize the hunter ids
+        # normalize the hunter ids for the Reinforcement model
+        # unlink dependency logic between board game and board policy
         for i in range(len(board)):
-            if board[i] == '8' or board[i] == '9':
-                board[i] = '1'
+            if board[i] == BOARD_HUNTER_3 or board[i] == BOARD_HUNTER_2 or board[i] == BOARD_HUNTER_1:
+                board[i] = BOARD_HUNTER_POLICY
         return ''.join(board)
 
-    def undo_move(self):
+    def undo_move(self) -> None:
+        '''Undo the move'''
         self._is_hunter_turn = not self._is_hunter_turn
         target_position, starting_position = self._last_move  # contrario!
-        self._board[starting_position] = '_'
+        self._board[starting_position] = BOARD_EMPTY
         if self._is_hunter_turn:
-            self._board[target_position] = '1'
+            self._board[target_position] = BOARD_HUNTER_1
         else:
             self._bear_moves -= 1
             self._bear_position = target_position
-            self._board[target_position] = '2'
+            self._board[target_position] = BOARD_BEAR
         self._last_move = None
-
-
 
     def move_player(self, start_pos, end_pos) -> str:
         '''
@@ -259,7 +278,6 @@ class BearGame:
         else:
             return self.move_bear(end_pos)
 
-
     def manage_ai_smart_bear_selection(self) -> str:
         '''
         Implement AI logic
@@ -267,7 +285,7 @@ class BearGame:
         bear_actions = self.get_bear_actions()
         action = self._bear_player.get_action(bear_actions, self)
         self.move_bear(action[1])
-        return "Orso intelligente ha mosso!!!"
+        return "L'orso intelligente ha mosso!"
     
     def manage_ai_bear_selection(self) -> str:
         '''
@@ -278,8 +296,8 @@ class BearGame:
         #print(move_options, bear_pos)
         time.sleep(1)
         # Bear makes the move
-        self._board[self._bear_position] = '_'
-        self._board[stupid_bear_new_pos] = '2'
+        self._board[self._bear_position] = BOARD_EMPTY
+        self._board[stupid_bear_new_pos] = BOARD_BEAR
         self._bear_moves += 1
         self._bear_position = stupid_bear_new_pos
         self._is_hunter_turn = not(self._is_hunter_turn)
@@ -289,8 +307,8 @@ class BearGame:
         '''Input selection from user; return user message to display'''
         if sel in self.get_possible_moves(self._bear_position):
             # Bear makes the move
-            self._board[self._bear_position] = '_'
-            self._board[sel] = '2'
+            self._board[self._bear_position] = BOARD_EMPTY
+            self._board[sel] = BOARD_BEAR
             self._bear_moves += 1
             self._bear_position = sel
             self._is_hunter_turn = not(self._is_hunter_turn)
@@ -298,7 +316,7 @@ class BearGame:
         else:
             return "Posizione non valida..."
     
-    def is_footprint_and_type(self, sel:int) -> tuple:
+    def is_footprint_and_type(self, sel:int) -> tuple[bool, str]:
         '''
         Return a tuple:
         - if is a footprint
@@ -318,14 +336,14 @@ class BearGame:
             else:
                 return (False, None)
 
-    def get_possible_moves(self, position: int) -> list:
+    def get_possible_moves(self, position: int) -> list[int]:
         '''
-        Returns the list with possible free (_) positions
+        Returns the list with possible free positions
         '''
         moves = []
         #Check free positions
         for x in BearGame.ADJACENT_POSITIONS[position]:
-            if self._board[x] == '_':
+            if self._board[x] == BOARD_EMPTY:
                 moves.append(x)
         return moves
 
@@ -372,7 +390,7 @@ class OrsoPyGame():
             pos.rect = pygame.Rect(p[0],p[1], OrsoPyGame.DIM_CASELLA, OrsoPyGame.DIM_CASELLA)
             self._lista_caselle.add(pos)
 
-    def _load_assets_game(self):
+    def _load_assets_game(self) -> None:
         '''Caricamento assets del gioco'''
         self.USCITA_IMG = get_img('images/back.png')
         self.USCITA_RECT = self.USCITA_IMG.get_rect()
@@ -382,7 +400,7 @@ class OrsoPyGame():
         # Scacchiera
         self.BOARD_IMG = get_img('images/board.png')
 
-    def _load_assets_menu(self):
+    def _load_assets_menu(self) -> None:
         '''Caricamento assets menu'''
         # grafica titolo creata con https://textcraft.net/
         self.ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
@@ -391,10 +409,9 @@ class OrsoPyGame():
         self.TITOLO = get_img_alpha("images/Gioco-dellorso.png")
         self.MENU_BACKGROUND = get_img("images/3d_board.png")
 
-    def menu(self):
+    def menu(self) -> None:
         '''
         Display main menu with PyGame
-        TODO: richiedere opzioni: numero mosse, chi parte
         '''
         pygame.mixer.music.load('sounds/intro.wav')
         pygame.mixer.music.play(-1)
@@ -767,7 +784,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
         '''Valorizza l'attributo image dello sprite'''
         # Disegna la pedine ottenendo la board dall'oggetto gioco
         bb = self.game.gioco_orso
-        if bb.get_board_position(self.position) == '_':
+        if bb.get_board_position(self.position) == BOARD_EMPTY:
             # Controllo se è orma
             is_orma, tipo_orma  = bb.is_footprint_and_type(self.position)            
             if is_orma:
@@ -778,13 +795,13 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
             else:
                 self.image = CasellaGiocoOrso.TRASPARENTE
         # Verifica se è orso
-        elif bb.get_board_position(self.position) == '2':            
+        elif bb.get_board_position(self.position) == BOARD_BEAR:            
             if not bb.is_hunter_turn():
                 self.image = CasellaGiocoOrso.ORSO_SEL_IMG
             else:
                 self.image = CasellaGiocoOrso.ORSO_IMG
         # Verifica se è uno dei cacciatori
-        elif bb.get_board_position(self.position) == '1':
+        elif bb.get_board_position(self.position) == BOARD_HUNTER_1:
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_UNO_SEL_IMG
             else:
@@ -792,7 +809,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
                     self.image = CasellaGiocoOrso.CACCIATORE_UNO_IMG
                 else:
                     self.image = CasellaGiocoOrso.CACCIATORE_UNO_IDLE_IMG
-        elif bb.get_board_position(self.position) == '8':
+        elif bb.get_board_position(self.position) == BOARD_HUNTER_2:
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_DUE_SEL_IMG
             else:
@@ -800,7 +817,7 @@ class CasellaGiocoOrso(pygame.sprite.Sprite):
                     self.image = CasellaGiocoOrso.CACCIATORE_DUE_IMG
                 else:
                     self.image = CasellaGiocoOrso.CACCIATORE_DUE_IDLE_IMG
-        elif bb.get_board_position(self.position) == '9':
+        elif bb.get_board_position(self.position) == BOARD_HUNTER_3:
             if (bb.get_hunter_starting_pos() == self.position):
                 self.image = CasellaGiocoOrso.CACCIATORE_TRE_SEL_IMG
             else:
@@ -839,49 +856,14 @@ class Player:
         )
 
     def load_policy(self, file):
+        '''Load file with policy for reinforcement learning'''
         with open(file, 'rb') as file_read:
             data = pickle.load(file_read)
-
+        # Policies are in states_value key
         self.states_value = (
             data if 'states_value' not in data else  # data legacy support
             data['states_value']
         )
-
-
-class AIPlayer:
-    '''
-    AI Player class
-    '''
-    INFINITY = 1000000
-
-    def __init__(self, name):
-        self.name = name
-        self.states_value = {}  # state -> value
-
-    def get_action(self, actions, current_board: OrsoPyGame):
-        value_max = -self.INFINITY
-        for act in actions:
-            current_board.move_player(act[0], act[1])
-            state_value = self.states_value.get(current_board.get_hash())
-            if (state_value is None):
-                value = 0
-            else:
-                value = state_value
-
-            if value >= value_max:
-                value_max = value
-                action = act
-
-            current_board.undo_move()
-        return action
-
-    def print_value(self, board):
-        print(f"{self.name}: {board.get_hash()} -> {self.states_value.get(board.get_hash())}")
-
-    def load_policy(self, file):
-        fr = open(file, 'rb')
-        self.states_value = pickle.load(fr)
-        fr.close()
 
 
 # Main
