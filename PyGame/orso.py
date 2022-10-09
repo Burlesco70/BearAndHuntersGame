@@ -78,6 +78,12 @@ class BearGame:
     def __init__(self, player_mode: int, max_bear_moves: int, hunter_starts: bool):
         # Start settings
         self.reset(player_mode, max_bear_moves, hunter_starts)
+        # Reinforcement learning loading for Bear AI
+        self._bear_player = Player("orso")
+        self._bear_player.load_policy(
+            os.path.join(base_path, "bear.policy")
+        )
+
         
     def reset(self, player_mode: int, max_bear_moves: int, hunter_starts: bool) -> None:
         # Start and reset settings
@@ -94,11 +100,6 @@ class BearGame:
         self.player_mode = player_mode
         self._winner = None
         self._last_move = None
-        # Reinforcement learning loading for Bear AI
-        self._bear_player = Player("orso")
-        self._bear_player.load_policy(
-            os.path.join(base_path, "bear.policy")
-        )
 
 
     def get_bear_moves(self) -> int:
@@ -832,7 +833,8 @@ class Player:
         self.name = name
         self.states_value = {}  # state -> value
 
-    def get_action(self, actions, current_board: OrsoPyGame):
+    def get_action(self, actions, current_board: OrsoPyGame) -> tuple[int, int]:
+        '''Return the action to take as tuple (startpos, endpos)'''
         value_max = -INFINITY
         for act in actions:
             current_board.move_player(act[0], act[1])
@@ -849,13 +851,13 @@ class Player:
             current_board.undo_move()
         return action
 
-    def print_value(self, board):
+    def print_value(self, board) -> None:
         print(
             f"{self.name}: {board.get_hash()} -> "
             f"{self.states_value.get(board.get_hash())}"
         )
 
-    def load_policy(self, file):
+    def load_policy(self, file) -> None:
         '''Load file with policy for reinforcement learning'''
         with open(file, 'rb') as file_read:
             data = pickle.load(file_read)
