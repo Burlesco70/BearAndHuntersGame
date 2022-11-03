@@ -367,8 +367,11 @@ class OrsoPyGame():
     def __init__(self):
         # Initialize pygame
         pygame.init()
+        # Code before display_flags
         #self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y))
-        self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y), pygame.FULLSCREEN)
+        # flags to manage full screen and rescaling, working for Pygame > 2.0
+        display_flags = pygame.SCALED | pygame.FULLSCREEN
+        self.screen = pygame.display.set_mode((OrsoPyGame.FINESTRA_X, OrsoPyGame.FINESTRA_Y), display_flags)
         pygame.display.set_caption("Gioco dell'orso")
         # set game clock
         self.clock = pygame.time.Clock()
