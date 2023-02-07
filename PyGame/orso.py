@@ -84,6 +84,11 @@ class BearGame:
             os.path.join(base_path, "bear.policy")
         )
 
+        # Deterministic distance based state-value function for Hunter AI
+        self._hunter_player = Player("cacciatore")
+        self._hunter_player.load_policy(
+            os.path.join(base_path, "hunter.policy")
+        )
         
     def reset(self, player_mode: int, max_bear_moves: int, hunter_starts: bool) -> None:
         # Start and reset settings
@@ -177,48 +182,26 @@ class BearGame:
     
     def manage_ai_hunter_selection(self) -> str:
         '''
-        Implement stupid random logic
+        use precalculated policy to select the best move for the hunter
         '''
-        # Simula il comportamento umano: prima sceglie il cacciatore
-        if (self._hunter_starting_pos == -1):
-            # Cerca le posizioni dei cacciatori
-            # self._hunter_starting_pos = -1
-            hunter_positions = []
-            for x in range(self.BOARD_POSITIONS):
-                if self._board[x] == BOARD_HUNTER_1 or self._board[x] == BOARD_HUNTER_2 or self._board[x] == BOARD_HUNTER_3:
-                    hunter_positions.append(x)
-            #print("Board", self._board)
-            #print("Posizioni cacciatori", hunter_positions)
-            # Sceglie cacciatore a caso
-            random_hunter = random.randint(0,2)
-            # Posizione del cacciatore
-            stupid_hunter_selection = hunter_positions[random_hunter]
-            # Verifica che abbia almeno una mossa disponibile... altrimenta va dagli altri
-            move_options = len(self.get_possible_moves(stupid_hunter_selection))
-            #print("Posizione cacciatore casuale", stupid_hunter_selection)
-            while move_options <= 0:
-                random_hunter = (random_hunter + 1) % 3
-                stupid_hunter_selection = hunter_positions[random_hunter]
-                #print("Posizione cacciatore casuale", stupid_hunter_selection)
-                move_options = len(self.get_possible_moves(stupid_hunter_selection))
-            self._hunter_starting_pos = stupid_hunter_selection
-            #print(move_options, self._hunter_starting_pos)
-            return "Cacciatore selezionato"
-        # Poi la mossa
-        else:
-            # Seleziona la mossa causale
-            # Move options
-            move_options = len(self.get_possible_moves(self._hunter_starting_pos))
-            # Select random move
-            stupid_hunter_new_pos = self.get_possible_moves(self._hunter_starting_pos)[random.randint(0,move_options-1)]          
-            # Selected hunter makes the move        
-            hunter_to_move = self._board[self._hunter_starting_pos]
-            self._board[self._hunter_starting_pos] = BOARD_EMPTY
-            self._board[stupid_hunter_new_pos] = hunter_to_move
-            self._hunter_starting_pos = -1
-            self._is_hunter_turn = not(self._is_hunter_turn)
-            time.sleep(1)
-            return "Orso, scegli la tua mossa!"
+        hunter_positions = []
+        for x in range(self.BOARD_POSITIONS):
+            if self._board[x] == BOARD_HUNTER_1 or self._board[x] == BOARD_HUNTER_2 or self._board[x] == BOARD_HUNTER_3:
+                hunter_positions.append(x)
+
+        hunter_actions = []
+        for x in hunter_positions:
+            moves = self.get_possible_moves(x)
+            for move in moves:
+                hunter_actions.append((x, move))
+
+        action = self._hunter_player.get_action(hunter_actions, self)
+        hunter_to_move = self._board[action[0]]
+        self._board[action[0]] = BOARD_EMPTY
+        self._board[action[1]] = hunter_to_move
+        self._is_hunter_turn = not self._is_hunter_turn
+
+        return "Orso, scegli la tua mossa!"
 
     def get_bear_actions(self) -> list[(int, int)]:
         '''
@@ -245,6 +228,13 @@ class BearGame:
             print(self._last_move)
             raise ValueError("Orso non può muoversi qui!")
 
+    def move_hunter(self, start_position: int, end_position: int) -> None:
+        self._last_move = (start_position, end_position)
+        start_symbol = self._board[start_position]
+        self._board[start_position] = BOARD_EMPTY
+        self._board[end_position] = start_symbol
+        self._is_hunter_turn = not self._is_hunter_turn
+
     def get_hash(self) -> str:
         '''
         Return a hash of the board
@@ -261,18 +251,19 @@ class BearGame:
         '''Undo the move'''
         self._is_hunter_turn = not self._is_hunter_turn
         target_position, starting_position = self._last_move  # contrario!
+        start_symbol = self._board[starting_position] # prendi il simbolo alla vecchia posizione
         self._board[starting_position] = BOARD_EMPTY
         if self._is_hunter_turn:
-            self._board[target_position] = BOARD_HUNTER_1
+            self._board[target_position] = start_symbol
         else:
             self._bear_moves -= 1
             self._bear_position = target_position
-            self._board[target_position] = BOARD_BEAR
+            self._board[target_position] = start_symbol
         self._last_move = None
 
     def move_player(self, start_pos, end_pos) -> str:
         '''
-        Move player to a random position
+        Move player to start position to end position
         '''
         if self._is_hunter_turn:
             return self.move_hunter(start_pos, end_pos)
@@ -299,7 +290,6 @@ class BearGame:
         # Bear makes the move
         self._board[self._bear_position] = BOARD_EMPTY
         self._board[stupid_bear_new_pos] = BOARD_BEAR
-        self._bear_moves += 1
         self._bear_position = stupid_bear_new_pos
         self._is_hunter_turn = not(self._is_hunter_turn)
         return "Seleziona uno dei cacciatori!"
@@ -836,7 +826,7 @@ class Player:
         self.name = name
         self.states_value = {}  # state -> value
 
-    def get_action(self, actions, current_board: OrsoPyGame) -> tuple[int, int]:
+    def get_action(self, actions, current_board: BearGame) -> tuple[int, int]:
         '''Return the action to take as tuple (startpos, endpos)'''
         value_max = -INFINITY
         for act in actions:
