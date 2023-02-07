@@ -6,6 +6,7 @@ Versione del gioco "finale" dopo il corso su PyGame
 ovvero con utilizzo di Sprites e gruppi di collisioni
 e maggiore orientamento OOP
 10-2022 - Aggiunta AI Orso
+02-2023 - Aggiunta AI Cacciatori
 '''
 
 from __future__ import annotations
@@ -76,6 +77,9 @@ class BearGame:
                           [18, 17, 19]]
 
     def __init__(self, player_mode: int, max_bear_moves: int, hunter_starts: bool):
+        '''
+        Load policies for AI
+        '''        
         # Start settings
         self.reset(player_mode, max_bear_moves, hunter_starts)
         # Reinforcement learning loading for Bear AI
@@ -91,6 +95,9 @@ class BearGame:
         )
         
     def reset(self, player_mode: int, max_bear_moves: int, hunter_starts: bool) -> None:
+        '''
+        Initial positions and settings
+        '''
         # Start and reset settings
         self._board = [BOARD_HUNTER_1, BOARD_HUNTER_2, BOARD_HUNTER_3, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY,
                        BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY, BOARD_EMPTY,
@@ -99,6 +106,8 @@ class BearGame:
         self._bear_position = 20
         self._bear_moves = 0
         self._hunter_starting_pos = -1
+        # _hunter_ai_final usato solo per hunter AI
+        self._hunter_ai_final = -1
         # From external configuration
         self._is_hunter_turn = hunter_starts        
         self._max_bear_moves = max_bear_moves
@@ -182,26 +191,34 @@ class BearGame:
     
     def manage_ai_hunter_selection(self) -> str:
         '''
-        use precalculated policy to select the best move for the hunter
+        Use precalculated policy to select the best move for the hunter
         '''
-        hunter_positions = []
-        for x in range(self.BOARD_POSITIONS):
-            if self._board[x] == BOARD_HUNTER_1 or self._board[x] == BOARD_HUNTER_2 or self._board[x] == BOARD_HUNTER_3:
-                hunter_positions.append(x)
+        # Simulation of human behavior: first select, than move
+        if (self._hunter_starting_pos == -1):
+            hunter_positions = []
+            for x in range(self.BOARD_POSITIONS):
+                if self._board[x] == BOARD_HUNTER_1 or self._board[x] == BOARD_HUNTER_2 or self._board[x] == BOARD_HUNTER_3:
+                    hunter_positions.append(x)
 
-        hunter_actions = []
-        for x in hunter_positions:
-            moves = self.get_possible_moves(x)
-            for move in moves:
-                hunter_actions.append((x, move))
+            hunter_actions = []
+            for x in hunter_positions:
+                moves = self.get_possible_moves(x)
+                for move in moves:
+                    hunter_actions.append((x, move))                    
 
-        action = self._hunter_player.get_action(hunter_actions, self)
-        hunter_to_move = self._board[action[0]]
-        self._board[action[0]] = BOARD_EMPTY
-        self._board[action[1]] = hunter_to_move
-        self._is_hunter_turn = not self._is_hunter_turn
-
-        return "Orso, scegli la tua mossa!"
+            action = self._hunter_player.get_action(hunter_actions, self)
+            self._hunter_starting_pos = action[0]
+            self._hunter_ai_final = action[1]
+            time.sleep(0.5)
+            return "Cacciatore selezionato"
+        else:
+            self._board[self._hunter_ai_final] = self._board[self._hunter_starting_pos]            
+            self._board[self._hunter_starting_pos] = BOARD_EMPTY
+            self._hunter_starting_pos = -1
+            self._hunter_ai_final = -1
+            self._is_hunter_turn = not self._is_hunter_turn
+            time.sleep(0.5)
+            return "Orso, scegli la tua mossa!"
 
     def get_bear_actions(self) -> list[(int, int)]:
         '''
@@ -215,6 +232,7 @@ class BearGame:
 
     def move_bear(self, new_position: int) -> None:
         '''
+        Used by move_player for get_actions
         Move bear to a random position
         '''
         self._last_move = (self._bear_position, new_position)
@@ -229,6 +247,9 @@ class BearGame:
             raise ValueError("Orso non può muoversi qui!")
 
     def move_hunter(self, start_position: int, end_position: int) -> None:
+        '''
+        Used by move_player for get_actions
+        '''
         self._last_move = (start_position, end_position)
         start_symbol = self._board[start_position]
         self._board[start_position] = BOARD_EMPTY
@@ -338,14 +359,20 @@ class BearGame:
                 moves.append(x)
         return moves
 
-# Metodo per ottimizzare il caricamento degli assets
-# "lru_cache" decorator saves recent images into memory for fast retrieval.
 @functools.lru_cache()
 def get_img(path):
+    '''
+    To optimize assets loading
+    "lru_cache" decorator saves recent images into memory for fast retrieval
+    '''
     return pygame.image.load(path)
 
 @functools.lru_cache()
 def get_img_alpha(path):
+    '''
+    To optimize assets loading for alpha images
+    "lru_cache" decorator saves recent images into memory for fast retrieval
+    '''
     return pygame.image.load(path).convert_alpha()
 
 class OrsoPyGame():
@@ -355,6 +382,9 @@ class OrsoPyGame():
     DIM_CASELLA = 80
 
     def __init__(self):
+        '''
+        Game init
+        '''
         # Initialize pygame
         pygame.init()
         # Code before display_flags
@@ -385,7 +415,7 @@ class OrsoPyGame():
             self._lista_caselle.add(pos)
 
     def _load_assets_game(self) -> None:
-        '''Caricamento assets del gioco'''
+        '''Loading game assets'''
         self.USCITA_IMG = get_img('images/back.png')
         self.USCITA_RECT = self.USCITA_IMG.get_rect()
         self.USCITA_RECT.center = (1355,675)
@@ -395,7 +425,7 @@ class OrsoPyGame():
         self.BOARD_IMG = get_img('images/board.png')
 
     def _load_assets_menu(self) -> None:
-        '''Caricamento assets menu'''
+        '''Loading menu assets'''
         # grafica titolo creata con https://textcraft.net/
         self.ORSO_IDLE_IMG = get_img('images/little-bear-idle.png')
         self.TRE_CACCIATORI_IMG = get_img('images/TreCacciatoriTurno.png')
@@ -426,8 +456,8 @@ class OrsoPyGame():
         # Voci menu centrale
         # Opzione menu Player Vs AI
         self.OPZIONI_PLAYER_MODE = {
-            10:"Gioca contro l'orso intelligente      ",
-            20:'Gioca contro i cacciatori stupidi     ',
+            10:"Gioca contro l'orso                   ",
+            20:'Gioca contro i cacciatori             ',
             30:'Gioca contro un amico                 ',
         }
         self._m_pl_mode = OpzioneMenuPlayerType(self.OPZIONI_PLAYER_MODE, 10, self, (580,350)) #305
@@ -450,6 +480,7 @@ class OrsoPyGame():
 
         self._pos_call = (0, 0)
         self._running = True
+        # Menu loop
         while self._running:
             self._pos_call = pygame.mouse.get_pos()
             for event in pygame.event.get():
@@ -468,7 +499,7 @@ class OrsoPyGame():
             pygame.display.update()
 
     def _quit(self):
-        '''Uscita dal gioco'''
+        '''Exit from game'''
         pygame.time.delay(500)
         pygame.mixer.music.fadeout(500)
         pygame.mixer.music.stop()
@@ -476,13 +507,13 @@ class OrsoPyGame():
         sys.exit()
 
     def _menu_call(self):
-        '''Richiamo menu'''
+        '''Menu call'''
         pygame.time.delay(500)
         pygame.mixer.music.fadeout(500)
         self.menu()
 
     def game(self, player_mode: int, numero_mosse: int, inizia_cacciatore: bool):
-        '''Gioco implementato con PyGame'''
+        '''Game logic with PyGame'''
         pygame.mixer.music.load('sounds/orso_music.ogg')
         pygame.mixer.music.play(-1)
         # Inizializza la scacchiera e il gioco
@@ -499,7 +530,8 @@ class OrsoPyGame():
         # Inizializzazioni
         self._running = True
         self._pos_call = (0, 0)
-        self._selezione = None   
+        self._selezione = None
+        # Game loop
         while self._running:
             # Se è turno AI deve procedere senza verificare click utente
             if (self.gioco_orso.player_mode == 10) and (not self.gioco_orso.is_hunter_turn()):
@@ -571,7 +603,7 @@ class OrsoPyGame():
 # Classi opzioni di menu
 class OpzioneMenu(pygame.sprite.Sprite):
     '''
-    Classe generica di opzione menu, richiede
+    Generic class for menu options; it requires
     - opzioni come dizionario valore:voce da visualizzare
     - valore iniziale di default
     - gioco orso
