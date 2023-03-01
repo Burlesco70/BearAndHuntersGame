@@ -46,6 +46,8 @@ https://vallecervobiella.wordpress.com/il-gioco-dellorso/
 
 * Text _- DONE_
 * Graphical with Tkinter _- DONE_
+![Menu](img/GUI-Menu.png)
+![Game](img/GUI-Game.png)
 * Graphical with PyGame _- DONE_ (Game labels and comments in Italian)
 ![Menu](img/PyGameVersion-Menu.png)
 ![Game](img/PyGameVersion-Game.png)
@@ -62,4 +64,4 @@ Music "Games Worldbeat" by Bernardo R. from http://freesound.org
 ### Steps on game ###
 
 * Human vs Human _- DONE_
-* Human vs Bot (AI)
+* Human vs Bot (AI) _- DONE_
