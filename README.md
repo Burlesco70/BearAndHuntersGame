@@ -47,6 +47,8 @@ https://vallecervobiella.wordpress.com/il-gioco-dellorso/
 * Text _- DONE_
 * Graphical with Tkinter _- DONE_
 * Graphical with PyGame _- DONE_ (Game labels and comments in Italian)
+![Menu](img/PyGameVersion-Menu.png)
+![Game](img/PyGameVersion-Game.png)
 * Graphical with PyGame and Bear AI _- DONE with main contribution of Angelo Huang (Flecart)_ (Game labels and comments in Italian)
 
 Thanks for PyGame lessons to Michele Pugno.
