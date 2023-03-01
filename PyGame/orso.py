@@ -578,6 +578,7 @@ class OrsoPyGame():
             self._hud.draw(self.screen)
             # Check fine del gioco
             if self.gioco_orso.game_over():
+                pygame.mixer.music.pause()
                 #self._msg = self.gioco_orso.get_winner_display()
                 self._msg = self.gioco_orso._winner
                 if self.gioco_orso.is_bear_winner():
@@ -591,6 +592,7 @@ class OrsoPyGame():
             # Reset del gioco
             if self.gioco_orso.game_over():
                 time.sleep(5)
+                pygame.mixer.music.unpause()
                 # Si inverte chi inizia
                 inizia_cacciatore = not(inizia_cacciatore)
                 if inizia_cacciatore:
