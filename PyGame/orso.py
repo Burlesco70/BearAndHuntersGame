@@ -863,6 +863,7 @@ class Player:
     def get_action(self, actions, current_board: BearGame) -> tuple[int, int]:
         '''Return the action to take as tuple (startpos, endpos)'''
         value_max = -INFINITY
+        best_actions = []
         for act in actions:
             current_board.move_player(act[0], act[1])
             state_value = self.states_value.get(current_board.get_hash())
@@ -871,12 +872,14 @@ class Player:
             else:
                 value = state_value
 
-            if value >= value_max:
+            if value > value_max:
                 value_max = value
-                action = act
+                best_actions = [act]
+            elif value == value_max:
+                best_actions.append(act)
 
             current_board.undo_move()
-        return action
+        return random.choice(best_actions)
 
     def print_value(self, board) -> None:
         print(
@@ -885,7 +888,7 @@ class Player:
         )
 
     def load_policy(self, file) -> None:
-        '''Load file with policy for reinforcement learning'''
+        '''Load file with policy'''
         with open(file, 'rb') as file_read:
             data = pickle.load(file_read)
         # Policies are in states_value key
