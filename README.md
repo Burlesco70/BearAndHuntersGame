@@ -59,7 +59,7 @@ Thanks for PyGame lessons to Michele Pugno.
 
 Thanks for the assets in PyGame version to Stefano Gunella and Enrico Battuello.
 
-Thanks for Bear AI implementation to Angelo Huang (Flecart).
+Thanks for Bear and Hunters AI implementation to Angelo Huang (Flecart).
 
 Music "Games Worldbeat" by Bernardo R. from http://freesound.org
 
@@ -67,3 +67,4 @@ Music "Games Worldbeat" by Bernardo R. from http://freesound.org
 
 * Human vs Human _- DONE_
 * Human vs Bot (AI) _- DONE_
+* Deployed as Web App _- DONE_
