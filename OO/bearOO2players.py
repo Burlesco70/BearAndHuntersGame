@@ -1,81 +1,43 @@
-class Board():
-    #init
-    def __init__(self):
-        self.__cells = ['_'] * 21
-        self.__cells[0] = self.__cells[1] = self.__cells[2] = '1'
-        # init bear position
+import sys
+from typing import List
+
+class BearBoardCell:
+    HUNTER = '1'
+    BEAR = '2'
+    NONE = '_'
+
+
+class BearBoard:
+    def __init__(self) -> None:
+        '''
+        Initial position of the pawns
+        '''
+        self.__cells = [BearBoardCell.NONE] * 21
+        self.__cells[0] = self.__cells[1] = self.__cells[2] = BearBoardCell.HUNTER
         self.__bear_position = 20
-        self.__max_bear_moves = 40
-        self.__cells[self.__bear_position] = '2'
-        # Hunter starts
-        self.__is_hunter_turn = True
-        # Bear moves counter
-        self.__bear_moves = 1
-        # Combinations for bear to loose, one for each edge position
-        # index ease                '0,','1', '2', '3', '4', '5', '6', '7', '8', '9', '10, '11, '12, '13  '14, '15, '16, '17, '18, '19, '20
-        self.__bear_ko_positions = [['2', '1', '1', '1', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_'], # Bear in 0
-                                    ['1', '_', '2', '1', '_', '_', '1', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_'], # Bear in 2
-                                    ['_', '_', '1', '_', '_', '_', '2', '_', '_', '_', '_', '_', '1', '1', '_', '_', '_', '_', '_', '_', '_'], # Bear in 6
-                                    ['_', '_', '_', '_', '_', '_', '1', '_', '_', '_', '_', '_', '1', '2', '_', '_', '1', '_', '_', '_', '_'], # Bear in 13
-                                    ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '1', '1', '_', '_', '2', '_', '_', '1', '_'], # Bear in 16
-                                    ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '1', '1', '_', '2', '1'], # Bear in 19
-                                    ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '1', '1', '1', '2'], # Bear in 20
-                                    ['_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '1', '_', '_', '1', '2', '_', '1'], # Bear in 18
-                                    ['_', '_', '_', '_', '_', '_', '_', '1', '1', '_', '_', '_', '_', '_', '2', '_', '_', '_', '1', '_', '_'], # Bear in 14
-                                    ['_', '_', '_', '_', '1', '_', '_', '2', '1', '_', '_', '_', '_', '_', '1', '_', '_', '_', '_', '_', '_'], # Bear in 7
-                                    ['_', '1', '_', '_', '2', '_', '_', '1', '1', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_'], # Bear in 4
-                                    ['1', '2', '_', '1', '1', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_']] # Bear in 1
-        
-    #displays board in a presentable order
-    def display(self):
-        # print board
-        print("            "+self.__cells[0]+"            ","             "+"0"+"            ")
-        print("        "+self.__cells[1]+"       "+self.__cells[2]+"        ","         "+"1"+"       "+"2"+"        ")
-        print("            "+self.__cells[3]+"            ","             "+"3"+"            ")
-        print("  "+self.__cells[4]+"         "+self.__cells[5]+"         "+self.__cells[6]+"  ","   "+"4"+"         "+"5"+"         "+"6"+"  ")
-        print(""+self.__cells[7]+"   "+self.__cells[8]+"   "+self.__cells[9]+"   "+self.__cells[10]+"   "+self.__cells[11]+"   "+self.__cells[12]+"   "+self.__cells[13]+"",
-              " "+"7"+"   "+"8"+"   "+"9"+"  "+"10"+"  "+"11"+"  "+"12"+"  "+"13"+"")
-        print("  "+self.__cells[14]+"         "+self.__cells[15]+"         "+self.__cells[16]+"  ","  "+"14"+"        "+"15"+"        "+"16"+"")
-        print("            "+self.__cells[17]+"            ","            "+"17"+"            ")
-        print("        "+self.__cells[18]+"       "+self.__cells[19]+"        ","        "+"18"+"      "+"19"+"        ")
-        print("            "+self.__cells[20]+"            ","            "+"20"+"            ")
+        self.__cells[self.__bear_position] = BearBoardCell.BEAR
 
-    #updates board
-    def update(self, starting_position, target_position):
-        self.__cells[starting_position] = '_'
-        if self.__is_hunter_turn:
-            self.__cells[target_position] = '1'
-        else:
-            self.__bear_moves += 1
-            self.__bear_position = target_position
-            self.__cells[target_position] = '2'
-        # Change turn
-        self.__is_hunter_turn = not self.__is_hunter_turn
-            
-    #checks all conditions for winner
-    def is_winner(self):
-        if (self.__cells in self.__bear_ko_positions):
-            print("Hunter WINS; Bear's moves ",self.__bear_moves)
-            return True
-        elif (self.__bear_moves > self.__max_bear_moves):
-            print("Bear WINS")            
-            return True
-        else:
-            return False
-
-    def is_hunter_turn(self):
-        return self.__is_hunter_turn
-
-    def get_bear_moves(self):
-        return self.__bear_moves
-
-    def get_bear_position(self):
+    def get_bear_position(self) -> int:
         return self.__bear_position
-        
-    def get_position(self, position):
-        return self.__cells[position]
+    
+    def is_hunter_position(self, position) -> bool:
+        return self.__cells[position] == BearBoardCell.HUNTER
 
-    def possible_moves(self, position):
+    def move(self, starting_position, target_position, is_hunter_turn) -> None:
+        '''
+        Moves pawn
+        '''
+        self.__cells[starting_position] = BearBoardCell.NONE
+        if is_hunter_turn:
+            self.__cells[target_position] = BearBoardCell.HUNTER
+        else:
+            self.__bear_position = target_position
+            self.__cells[target_position] = BearBoardCell.BEAR
+
+    def possible_moves(self, position) -> List[int]:
+        '''
+        Return possible moves (adjacent free positiion)
+        '''        
         #Adjacent locations
         adjacent = [[1,2,3], #0
                 [0,3,4],
@@ -101,50 +63,106 @@ class Board():
         moves = []
         #Check free positions
         for x in adjacent[position]:
-            if self.__cells[x] == '_':
+            if self.__cells[x] == BearBoardCell.NONE:
                 moves.append(x)
-        return moves
+        return moves        
+
+    def __str__(self) -> None:
+        '''
+        Very basic print of itself
+        '''
+        return ''.join(("            ",self.__cells[0], "                          0            \n",
+            "        ", self.__cells[1], "       ", self.__cells[2], "                  1       2        \n",
+            "            ",self.__cells[3],"            ","             "," 3","            \n",
+            "  ",self.__cells[4],"         ",self.__cells[5],"         ",self.__cells[6],"      4         5         6  \n",
+            self.__cells[7],"   ",self.__cells[8],"   ",self.__cells[9],"   ",self.__cells[10],"   ",self.__cells[11],"    ",self.__cells[12],"   ",self.__cells[13], " 7   8   9  10  11  12  13\n",
+            "  ",self.__cells[14],"         ",self.__cells[15],"         ",self.__cells[16],"     14        15        16\n",
+            "            ",self.__cells[17],"                         17            \n",
+            "        ",self.__cells[18],"       ",self.__cells[19],"                 18      19        \n",
+            "            ",self.__cells[20],"                         20            \n"))
+
+class BearGame:
+    MAX_BEAR_MOVES=30
+    BEAR_STARTS=True
+
+    def __init__(self) -> None:
+        self.board = BearBoard()
+        self.bear_moves = 1
+        self.is_hunter_turn = False if self.BEAR_STARTS else True
+        self.winner = None
+        print(self.board)
     
-##########################################################################################################
-# The game
-##########################################################################################################
-#MODEL
-# init board
-game = Board()
+    def is_over(self) -> bool:
+        '''
+        Conditions for end of game
+        '''
+        # Moves for bear to win
+        is_over = False
+        if (not self.is_hunter_turn) and (not self.board.possible_moves(self.board.get_bear_position())):
+            is_over = True
+            self.winner = "HUNTER"
+            print("The BEAR is surrounded by the hunders...")
+        if (self.bear_moves > self.MAX_BEAR_MOVES):
+            is_over = True
+            self.winner = "BEAR"
+            print(f"Bear moves are {self.MAX_BEAR_MOVES}.\nThe BEAR has escaped...")
+        return is_over        
 
-# Game cycle
-while not game.is_winner():
-    game.display()
-    # Starting position
-    if game.is_hunter_turn():
-        print("Hunter is playing")
-        try:
-            # Must be integer
-            starting_pos = int(input(" Enter position you want to pick from (0-20): \n").strip())
-            # Between 0 and 20
-            if starting_pos < 0 or starting_pos > 20:
-                print("Number out of range")
-                raise Exception
-            # Belonging to hunter
-            if (game.get_position(starting_pos) != '1'):
-                print("Not your pawn")
-                raise Exception 
-        except:
-            print("Please enter only valid fields from board (0-20)")
-            continue
-        
-    else:
-        print("Bear is playing move n. ",game.get_bear_moves())
-        starting_pos = game.get_bear_position()
+    def game_loop(self) -> None:
+        '''
+        Game loop for the game
+        - Move request (2 requests for hunters, 1 request for bear)
+        - Checks for valid move
+        - Move
+        - Show board changes
+        '''
+        while not self.is_over():
+            # Asymmetric turn: hunter choose pawn first
+            if self.is_hunter_turn:
+                print("Hunter is playing")
+                try:
+                    # Must be integer
+                    starting_pos = int(input(" Enter position you want to pick from (0-20):\n").strip())
+                    # Between 0 and 20
+                    if starting_pos < 0 or starting_pos > 20:
+                        print("Number out of range")
+                        raise ValueError
+                    # Belonging to hunter
+                    if not self.board.is_hunter_position(starting_pos):
+                        print("Not your pawn")
+                        raise ValueError 
+                except KeyboardInterrupt:
+                    print('\nGame aborted.')
+                    sys.exit(0)
+                except ValueError:
+                    print("Please enter only valid hunter position in the board (0-20)")
+                    continue
+            # Bear's turn
+            else:
+                print("Bear is playing move n. ",self.bear_moves)
+                starting_pos = self.board.get_bear_position()
+            # Target position
+            try:
+                target_pos = int(input(f"Enter target adjacent position {self.board.possible_moves(starting_pos)} you want to go to: \n").strip())
+                if target_pos not in self.board.possible_moves(starting_pos):
+                    raise ValueError
+            except KeyboardInterrupt:
+                print('\nGame aborted.')
+                sys.exit(0)                
+            except ValueError:
+                print(f"Please enter only valid adjacent target position in the board {self.board.possible_moves(starting_pos)}")
+                continue
+            # Make the move
+            if not self.is_hunter_turn:
+                self.bear_moves += 1
+            self.board.move(starting_pos, target_pos, self.is_hunter_turn)              
+            # Change turn           
+            self.is_hunter_turn = not self.is_hunter_turn
+            # Show changes
+            print(self.board)
 
-    # Target position
-    try:
-        target_pos = int(input(" Enter target position you want to go to: \n").strip())
-        if target_pos not in game.possible_moves(starting_pos):
-            raise Exception
-    except:
-        print("Please enter only valid fields from board (0-20)")
-        continue
-    # Make the move
-    game.update(starting_pos, target_pos)
 
+if __name__ == "__main__":
+    bg  = BearGame()
+    bg.game_loop()
+    print(f"GAME OVER!\n{bg.winner} WINS")
