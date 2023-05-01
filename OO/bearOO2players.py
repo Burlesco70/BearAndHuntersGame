@@ -81,15 +81,16 @@ class BearBoard:
             "        ",self.__cells[18],"       ",self.__cells[19],"                 18      19        \n",
             "            ",self.__cells[20],"                         20            \n"))
 
-class BearGame:
-    MAX_BEAR_MOVES=30
+class BearGameManche:
+    MAX_BEAR_MOVES=40
     BEAR_STARTS=True
 
-    def __init__(self) -> None:
+    def __init__(self, description) -> None:
+        self.description = description
         self.board = BearBoard()
         self.bear_moves = 1
         self.is_hunter_turn = False if self.BEAR_STARTS else True
-        self.winner = None
+        print(self.description)
         print(self.board)
     
     def is_over(self) -> bool:
@@ -100,17 +101,15 @@ class BearGame:
         is_over = False
         if (not self.is_hunter_turn) and (not self.board.possible_moves(self.board.get_bear_position())):
             is_over = True
-            self.winner = "HUNTER"
             print("The BEAR is surrounded by the hunders...")
         if (self.bear_moves > self.MAX_BEAR_MOVES):
             is_over = True
-            self.winner = "BEAR"
-            print(f"Bear moves are {self.MAX_BEAR_MOVES}.\nThe BEAR has escaped...")
+            print(f"Bear moves are {self.MAX_BEAR_MOVES}.\nBear has escaped...")
         return is_over        
 
     def game_loop(self) -> None:
         '''
-        Game loop for the game
+        Game loop for the manche
         - Move request (2 requests for hunters, 1 request for bear)
         - Checks for valid move
         - Move
@@ -162,7 +161,50 @@ class BearGame:
             print(self.board)
 
 
+class GamePlayer:
+    def __init__(self, name) -> None:
+        self.name = name
+        self.bear_moves = 0
+
+
+
+class BearGame:
+
+    def __init__(self) -> None:
+        self.player_A = GamePlayer("Player A")
+        self.player_B = GamePlayer("Player B")
+        self.winner = None
+        print("THE GAME OF THE BEAR")
+    
+    def game_loop(self):
+        while not self.is_over():        
+            fm = BearGameManche("FIRST MANCHE")
+            fm.game_loop()
+            self.player_A.bear_moves = fm.bear_moves
+            sm = BearGameManche("SECOND MANCHE")
+            sm.game_loop()
+            self.player_B.bear_moves = sm.bear_moves
+            if self.player_A.bear_moves > self.player_B.bear_moves:
+                self.winner = self.player_A.name
+            elif self.player_B.bear_moves > self.player_A.bear_moves:
+                self.winner = self.player_B.name
+            else:
+                self.winner = "DRAW!"
+
+    def is_over(self) -> bool:
+        '''
+        Conditions for end of game
+        '''
+        # Moves for bear to win
+        is_over = False
+        if self.winner:
+            print(f"WINNER is: {self.winner}")
+            new_game = input("Another challange?")
+            #TODO Rewrite
+            if new_game == "N":
+                is_over = True
+        return is_over 
+
 if __name__ == "__main__":
     bg  = BearGame()
     bg.game_loop()
-    print(f"GAME OVER!\n{bg.winner} WINS")
