@@ -74,8 +74,8 @@ def main():
     # init bear position
     bear_position = 20
     game_board[bear_position] = '2'
-    # Hunter starts
-    is_hunter_turn = True
+    # Bear starts
+    is_hunter_turn = False
     # Bear moves counter
     bear_moves = 1
     # Show the board
